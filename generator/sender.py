@@ -1,7 +1,7 @@
-import random
 import socket
-import threading
-import time
+from threading import Thread
+from time import sleep
+from datetime import datetime
 
 TEST = True             # Whether to run an additional consuming daemon
 
@@ -9,7 +9,7 @@ TEST = True             # Whether to run an additional consuming daemon
 INF_BUDGET  = False # Produce untill interrupted
 BUDGET      = 10    # No. tuples produced
 
-DATA_RATE           = 100000000 # Tuples/sec
+DATA_RATE           = 10 # Tuples/sec
 PARALLEL_INSTANCES  = 1         # No. producing threads
 
 HOST = "localhost"
@@ -29,6 +29,7 @@ def run_instance(thread_id):
 
             i = 0
             while True:
+                start = datetime.now()
                 data = i.to_bytes(8, byteorder='big')
                 conn.sendall(data)
                 print(thread_id, " sent ", i)
@@ -37,7 +38,9 @@ def run_instance(thread_id):
                 if not INF_BUDGET and i >= BUDGET:
                     break;
 
-                time.sleep(1)
+                diff = datetime.now() - start
+
+                sleep(1/DATA_RATE - diff.total_seconds())
 
 def consume_test():
     print("Start consumer")
@@ -57,12 +60,12 @@ if __name__ == "__main__":
     threads = list()
 
     for i in range(PARALLEL_INSTANCES):
-        t = threading.Thread(target=run_instance, args=(i,))
+        t = Thread(target=run_instance, args=(i,))
         threads.append(t)
         t.start()
 
     if TEST:
-        test = threading.Thread(target=consume_test, args=(), daemon=True)
+        test = Thread(target=consume_test, args=(), daemon=True)
         test.start()
 
     for t in threads:
