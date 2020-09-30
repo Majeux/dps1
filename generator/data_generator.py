@@ -3,20 +3,23 @@ import socket
 import threading
 import time
 
-TEST = True
+TEST = True             # Whether to run an additional consuming daemon
 
 #limit data for debugging
-INF_BUDGET = False
-BUDGET = 10
+INF_BUDGET  = False # Produce untill interrupted
+BUDGET      = 10    # No. tuples produced
 
-DATA_RATE = 100000000
-PARALLEL_INSTANCES = 2
+DATA_RATE           = 100000000 # Tuples/sec
+PARALLEL_INSTANCES  = 1         # No. producing threads
 
 HOST = "localhost"
-PORT = 8080
+PORT = 5555
 
 def run_instance(thread_id):
+    print("Start producer ", thread_id)
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(10)
         s.bind((HOST, PORT))
         s.listen()
         conn, addr = s.accept()
@@ -28,6 +31,7 @@ def run_instance(thread_id):
             while True:
                 data = i.to_bytes(8, byteorder='big')
                 conn.sendall(data)
+                print(thread_id, " sent ", i)
 
                 i = i + 1
                 if not INF_BUDGET and i >= BUDGET:
@@ -36,8 +40,13 @@ def run_instance(thread_id):
                 time.sleep(1)
 
 def consume_test():
+    print("Start consumer")
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(10)
         s.connect((HOST, PORT))
+
+        print('Consumer connected by', (HOST, PORT))
 
         while True:
             data = s.recv(1024)
@@ -54,6 +63,7 @@ if __name__ == "__main__":
 
     if TEST:
         test = threading.Thread(target=consume_test, args=(), daemon=True)
+        test.start()
 
     for t in threads:
         t.join()
