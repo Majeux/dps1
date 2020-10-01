@@ -17,6 +17,7 @@ print("Running on " + sys.argv[1] + " nodes")
 # Reserve the nodes
 os.system("preserve -# " + str(num_nodes) + " -t " + run_time)
 reservation_id = subprocess.check_output("preserve -llist | grep ddps2016 | awk '{ print $1 }'")
+reserved_nodes = subprocess.check_output("preserve -llist | grep ddps2016 | awk '{ s = ""; for (i = 9; i <= NF; i++) s = s $i " "; print s }'").split()
 
 # Continuously check whether the nodes are available
 reservation_status="PD"
@@ -32,6 +33,7 @@ while reservation_status != "R":
 		os.system("preserve -c " + reservation_id)
 
 # If we've gotten here, the reservation is ready
+
 # Deploy the zookeeper nodes
 
 # Deploy the nimbus node
