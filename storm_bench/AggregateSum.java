@@ -1,5 +1,3 @@
-package test;
-
 import org.apache.storm.streams.Stream;
 import org.apache.storm.streams.StreamBuilder;
 import org.apache.storm.sql.runtime.datasource.socket.spout.SocketSpout; // todo: implement
