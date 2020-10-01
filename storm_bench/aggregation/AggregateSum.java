@@ -1,4 +1,4 @@
-package AggregationTest;
+package aggregation;
 
 import org.apache.storm.streams.Stream;
 import org.apache.storm.streams.StreamBuilder;
