@@ -14,4 +14,4 @@ test:
 	jar cvf $(JARNAME) AggregationTest
 
 run:
-	$(STORM_DIR)/bin/storm local --jars $(RUN_LIBS) ./AggregateSum.jar AggregationTest.AggregateSum
+	$(STORM_DIR)/bin/storm jar --jars $(RUN_LIBS) ./AggregateSum.jar AggregationTest.AggregateSum
