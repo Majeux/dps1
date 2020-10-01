@@ -2,8 +2,10 @@ import socket
 from threading import Thread
 from time import sleep
 from datetime import datetime
+import ntplib
 
-TEST = True             # Whether to run an additional consuming daemon
+TEST     = True            # Whether to run an additional consuming daemon
+NTP_TIME = True
 
 #limit data for debugging
 INF_BUDGET  = False # Produce untill interrupted
@@ -15,8 +17,17 @@ PARALLEL_INSTANCES  = 1         # No. producing threads
 HOST = "localhost"
 PORT = 5555
 
+def getLocalTime(client = None):
+    if client != None:
+        response = client.request('localhost')
+        return response.tx_time
+
+    return datetime.now().total_seconds()
+
 def run_instance(thread_id):
     print("Start producer ", thread_id)
+
+    time_client = ntplib.NTPClient()
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(10)
@@ -29,18 +40,20 @@ def run_instance(thread_id):
 
             i = 0
             while True:
-                start = datetime.now()
-                data = i.to_bytes(8, byteorder='big')
-                conn.sendall(data)
+                start = getLocalTime(time_client)
+
+                data = i
+                conn.sendall(data.to_bytes(8, byteorder='big'))
+
                 print(thread_id, " sent ", i)
 
                 i = i + 1
                 if not INF_BUDGET and i >= BUDGET:
                     break;
 
-                diff = datetime.now() - start
+                diff = getLocalTime(time_client) - start
 
-                sleep(1/DATA_RATE - diff.total_seconds())
+                sleep(1/DATA_RATE - diff)
 
 def consume_test():
     print("Start consumer")
