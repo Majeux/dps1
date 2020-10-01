@@ -1,4 +1,4 @@
-package tester;
+package test;
 
 import org.apache.storm.streams.Stream;
 import org.apache.storm.streams.StreamBuilder;
