@@ -1,3 +1,5 @@
+package AggregationTest;
+
 import org.apache.storm.streams.Stream;
 import org.apache.storm.streams.StreamBuilder;
 import org.apache.storm.sql.runtime.datasource.socket.spout.SocketSpout; // todo: implement
@@ -14,7 +16,7 @@ import org.apache.storm.streams.operations.mappers.ValueMapper;
 import org.apache.storm.generated.*;
 
 
-class AggregateSum {
+public class AggregateSum {
 	public static void main(String[] args) {
 		StreamBuilder builder = new StreamBuilder();
 
