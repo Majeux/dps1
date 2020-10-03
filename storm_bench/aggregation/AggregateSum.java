@@ -22,9 +22,10 @@ public class AggregateSum {
 
 		builder.newStream(new RandomIntegerSpout(), new ValueMapper<Integer>(0))
 			.window(SlidingWindows.of(Count.of(10), Count.of(2)))
-			.mapToPair(w -> Pair.of("test", w))
-			.reduceByKey((x, y) -> x + y) //reduce is makkelijker te laten werken, replace met aggregate
-			.print();
+			.mapToPair(w -> Pair.of("test", Long.valueOf(w)))
+			//.reduceByKey((x, y) -> x + y) //reduce is makkelijker te laten werken, replace met aggregate
+			.aggregateByKey(new Sum())
+            .print();
 
 		Config config = new Config();
 		config.setNumWorkers(1);
@@ -34,7 +35,6 @@ public class AggregateSum {
 		catch(AuthorizationException e) { System.out.println("Auth problem"); }
  	}
 
-	// TODO: laat dit werken met pairstreams (aggregatebykey)
 	private static class Sum implements CombinerAggregator<Long, Long, Long> {
 	    @Override // The initial value of the sum
 	    public Long init() { return 0L; }

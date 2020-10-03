@@ -4,14 +4,14 @@ LIBS		=$(STORM_DIR)/lib/storm-client-2.2.0.jar:$(STORM_DIR)/lib-tools/sql/runtim
 
 RUN_LIBS	=$(STORM_DIR)/lib/storm-starter-2.2.0.jar,$(STORM_DIR)/lib-tools/sql/runtime/storm-sql-runtime-2.2.0.jar 
 BUILDDIR	= ./build
-SRC			= ./Aggregation/AggregateSum.java
+SRC			= ./aggregation/AggregateSum.java
 JARNAME		= ./aggregate.jar
 
 all: test
 
 test:
 	javac -cp $(LIBS) $(SRC)
-	jar cvf $(JARNAME) AggregationTest
+	jar cvf $(JARNAME) aggregation
 
-run:
-	$(STORM_DIR)/bin/storm jar --jars $(RUN_LIBS) ./AggregateSum.jar aggregation.AggregateSum
+submit:
+	$(STORM_DIR)/bin/storm jar --jars $(RUN_LIBS) ./aggregate.jar aggregation.AggregateSum
