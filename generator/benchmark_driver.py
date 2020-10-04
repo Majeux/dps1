@@ -23,7 +23,7 @@ def getLocalTime(client = None):
 
 def stream_from_queue(q):
     print("Start Streamer")
-    
+
     time_client = ntplib.NTPClient()
 
     with socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -50,7 +50,7 @@ def stream_from_queue(q):
 
 def run():
     q = Queue()
-    ad_generators = [ Process(target=gen_ad, args=(q, i,)) for i in range(N_PROCESSES) ]
+    ad_generators = [ Process(target=gen_ad, args=(q, ntplib.NTPClient(), i,)) for i in range(N_PROCESSES) ]
 
     for g in ad_generators:
         g.start()
