@@ -1,22 +1,29 @@
 from multiprocessing import Process, Queue
-from socket import socket
+import socket
 from our_ntp import getLocalTime
 import ntplib
 import generator
 
-TEST = True
+TEST = False
 
-BUDGET = 10
+BUDGET = 100
 
 GEN_RATE    = 4 # Tuples/sec
-N_PROCESSES = 2         # No. producing threads
+N_PROCESSES = 2     # No. producing threads
 
 HOST = "localhost"
 PORT = 5555
 
+SOCKET_TIMEOUT = 6000
+
+results = [0, 0, 0, 0, 0]
+
 def get_purchase_data(q):
     (gid, price, event_time) = q.get()
-    return '{{ "gem":{}, "price":{}, "event_time":{} }}\n'.format(gid, price, event_time)
+    results[gid] += price
+    purchase = '{{ "gem":{}, "price":{}, "event_time":{} }}\n'.format(gid, price, event_time)
+    print(purchase)
+    return purchase
 
 def stream_from_queue(q):
     print("Start Streamer")
@@ -29,10 +36,11 @@ def stream_from_queue(q):
 
             print("TEST: got", data)
     else:
-        with socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(10) # TODO determine/tweak
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(SOCKET_TIMEOUT) # TODO determine/tweak
             s.bind((HOST, PORT))
             s.listen()
+            print("waiting for connection")
             conn, addr = s.accept()
 
             with conn:
@@ -66,6 +74,8 @@ def run():
         g.start()
 
     stream_from_queue(q)
+    for i in range(5):
+        print(i, ": ", results[i])
 
 if __name__ == "__main__":
     run()

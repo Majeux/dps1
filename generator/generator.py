@@ -15,11 +15,13 @@ def gen_ad(time_client):
     )
 
 def gen_purchase(time_client):
-    return (
+    purchase = (
         randrange(GEM_RANGE),
         randrange(PRICE_RANGE),
         getLocalTime(time_client)
     )
+    return purchase
+
 
 def ad_generator(q, time_client, id, generation_rate):
     print("Start ad generator ", id)
@@ -30,7 +32,7 @@ def ad_generator(q, time_client, id, generation_rate):
         q.put(gen_ad(time_client))
 
         diff = getLocalTime(time_client) - start
-        sleep(1/generation_rate - diff)
+        sleep(max(0, 1/generation_rate - diff))
 
 def purchase_generator(q, time_client, id, generation_rate):
     print("Start purchase generator ", id)
@@ -41,7 +43,7 @@ def purchase_generator(q, time_client, id, generation_rate):
         q.put(gen_purchase(time_client))
 
         diff = getLocalTime(time_client) - start
-        sleep(1/generation_rate - diff)
+        sleep(max(0, 1/generation_rate - diff))
 
 if __name__ == "__main__":
     print("Test purchase_generator")

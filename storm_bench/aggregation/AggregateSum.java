@@ -17,11 +17,15 @@ import org.apache.storm.streams.Pair;
 import org.apache.storm.streams.operations.mappers.ValueMapper;
 import org.apache.storm.generated.*;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.streams.operations.Consumer;
 
 // AUXILLIARY
 import java.util.List;
 import java.util.Arrays;
 import java.lang.Math;
+import java.io.FileWriter;
+import java.io.IOException;
+
 
 public class AggregateSum {
     static List<String> fields = Arrays.asList("gem", "price", "event_time");
@@ -33,20 +37,35 @@ public class AggregateSum {
     
         StreamBuilder builder = new StreamBuilder();
 
+        System.out.println("GETFUKT");
+
         builder.newStream(new SocketSpout(new JsonScheme(fields), IP, Integer.parseInt(PORT)))
-			.window(SlidingWindows.of(Count.of(10), Count.of(2)))
-			.mapToPair(x -> Pair.of(x.getValueByField("gem"), new Values(x)))
-			.aggregateByKey(new Sum2())
-            .print();
+            .forEach(x -> System.out.println("LELELEL"));
+	    	//.window(SlidingWindows.of(Count.of(10), Count.of(2)))
+            //.mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
+	        //.aggregateByKey(new Sum2())
+            //.forEach(x -> System.out.println("LELELEL"));
 
         // Build config and submit
-		Config config = new Config();
-		config.setNumWorkers(num_workers);
-		try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
-		catch(AlreadyAliveException e) { System.out.println("Already alive"); }
-		catch(InvalidTopologyException e) { System.out.println("Invalid topolgy"); }
-		catch(AuthorizationException e) { System.out.println("Auth problem"); }
+	    Config config = new Config();
+	    config.setNumWorkers(num_workers);
+	   	try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
+	   	catch(AlreadyAliveException e) { System.out.println("Already alive"); }
+	   	catch(InvalidTopologyException e) { System.out.println("Invalid topolgy"); }
+	   	catch(AuthorizationException e) { System.out.println("Auth problem"); }
  	}
+
+    private static class toFile implements Consumer<Pair<Integer, Values>> {
+        @Override 
+        public void accept(Pair<Integer, Values> input) {
+            try { 
+                FileWriter result_file = new FileWriter("/home/rijeun/Documents/DPS/storm/result.txt"); 
+                try { result_file.write("GemID: " + input.getFirst() + input.getSecond().print()); }
+                catch (IOException e) { System.out.println("Output file error."); }
+            }
+            catch (IOException e) { System.out.println("Output file error."); }
+        }
+    }
 
     // Container to easily aggregate over just the price (with dangling event_time)
     private static class Values {
@@ -60,6 +79,10 @@ public class AggregateSum {
 
         public Values(Tuple x) {
             this(x.getLongByField("price"), x.getDoubleByField("event_time"));
+        }
+
+        public String print() {
+            return ", sum price: " + Long.toString(price) + ", lowest time" + Double.toString(event_time) + "\n";
         }
     }
 
@@ -87,18 +110,5 @@ public class AggregateSum {
 	    @Override // extract result from the accumulator (here the accumulator and result is the same)
 	    public Values result(Values accum) { return accum; }
 	}
-	
-    private static class Sum implements CombinerAggregator<Long, Long, Long> {
-	    @Override // The initial value of the sum
-	    public Long init() { return 0L; }
-
-	    @Override // Updates the sum by adding the value (this could be a partial sum)
-	    public Long apply(Long aggregate, Long value) { return aggregate + value; }
-
-	    @Override // merges the partial sums
-	    public Long merge(Long accum1, Long accum2) { return accum1 + accum2; }
-
-	    @Override // extract result from the accumulator (here the accumulator and result is the same)
-	    public Long result(Long accum) { return accum; }
-	}
 }
+
