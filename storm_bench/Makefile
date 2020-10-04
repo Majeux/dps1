@@ -10,8 +10,15 @@ JARNAME		= ./aggregate.jar
 all: test
 
 test:
+	make clean
 	javac -cp $(LIBS) $(SRC)
 	jar cvf $(JARNAME) aggregation
 
-submit:
+submit: test
 	$(STORM_DIR)/bin/storm jar --jars $(RUN_LIBS) ./aggregate.jar aggregation.AggregateSum localhost 5555 1 
+
+kill:
+	$(STORM_DIR)/bin/storm kill "agsum"
+
+clean:
+	rm -f $(JARNAME)

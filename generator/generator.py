@@ -5,7 +5,7 @@ import ntplib
 
 USER_RANGE  = 1000 #idk
 GEM_RANGE   = 5
-PRICE_RANGE = 100
+PRICE_RANGE = 10
 
 def gen_ad(time_client):
     return (

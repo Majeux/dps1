@@ -6,9 +6,9 @@ import generator
 
 TEST = False
 
-BUDGET = 100
+BUDGET = 1000000
 
-GEN_RATE    = 4 # Tuples/sec
+GEN_RATE    = 2000 # Tuples/sec
 N_PROCESSES = 2     # No. producing threads
 
 HOST = "localhost"
@@ -52,19 +52,6 @@ def stream_from_queue(q):
                     conn.sendall(data.encode())
 
                     print('Sent tuple #', i)
-
-def consume_test():
-    print("Start consumer")
-
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(10)
-        s.connect((HOST, PORT))
-
-        print('Consumer connected by', (HOST, PORT))
-
-        while True:
-            data = s.recv(1024)
-            print("Received: ", int.from_bytes(data, 'big'))
 
 def run():
     q = Queue()
