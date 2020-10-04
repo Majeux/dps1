@@ -1,51 +1,49 @@
 from multiprocessing import Process, Queue
 from socket import socket
-from time import sleep
-from datetime import datetime
+from our_ntp import getLocalTime
 import ntplib
+import generator
 
-BUDGET = 100
+TEST = True
 
-STREAM_RATE  = 10 # Tuples/sec
-N_PROCESSES  = 1         # No. producing threads
+BUDGET = 10
+
+GEN_RATE    = 4 # Tuples/sec
+N_PROCESSES = 2         # No. producing threads
 
 HOST = "localhost"
 PORT = 5555
 
-def getLocalTime(client = None):
-    if client != None:
-        response = client.request('localhost')
-        return response.tx_time
-
-    return datetime.now().total_seconds()
-
+def get_purchase_data(q):
+    (gid, price, event_time) = q.get()
+    return '{{ "gem":{}, "price":{}, "event_time":{} }}\n'.format(gid, price, event_time)
 
 def stream_from_queue(q):
     print("Start Streamer")
 
     time_client = ntplib.NTPClient()
 
-    with socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(10) # TODO determine/tweak
-        s.bind((HOST, PORT))
-        s.listen()
-        conn, addr = s.accept()
+    if TEST:
+        for i in range(BUDGET):
+            data = get_purchase_data(q)
 
-        with conn:
-            print("Streamer connected by", addr)
+            print("TEST: got", data)
+    else:
+        with socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(10) # TODO determine/tweak
+            s.bind((HOST, PORT))
+            s.listen()
+            conn, addr = s.accept()
 
-            for i in range(BUDGET):
-                start = getLocalTime(time_client)
+            with conn:
+                print("Streamer connected by", addr)
 
-                (uid, gid, event_time) = q.get()
-                data = '{ "user":{}, "gem":{}, "event_time":{} }'.format(uid, gid, event_time)
-                conn.sendall(data.encode())
+                for i in range(BUDGET):
+                    data = get_purchase_data(q)
 
-                print('Sent tuple #', i)
+                    conn.sendall(data.encode())
 
-                diff = getLocalTime(time_client) - start
-
-                sleep(1/STREAM_RATE - diff)
+                    print('Sent tuple #', i)
 
 def consume_test():
     print("Start consumer")
@@ -62,14 +60,12 @@ def consume_test():
 
 def run():
     q = Queue()
-    ad_generators = [ Process(target=gen_ad, args=(q, ntplib.NTPClient(), i,), daemon = True) for i in range(N_PROCESSES) ]
+    ad_generators = [ Process(target=generator.purchase_generator, args=(q, ntplib.NTPClient(), i,GEN_RATE,), daemon = True) for i in range(N_PROCESSES) ]
 
     for g in ad_generators:
         g.start()
 
     stream_from_queue(q)
 
-    for g in ad_generators:
-        g.join()
-
 if __name__ == "__main__":
+    run()

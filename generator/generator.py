@@ -1,4 +1,5 @@
 from random import randrange
+from time import sleep
 from our_ntp import getLocalTime
 import ntplib
 
@@ -29,7 +30,7 @@ def ad_generator(q, time_client, id, generation_rate):
         q.put(gen_ad(time_client))
 
         diff = getLocalTime(time_client) - start
-        sleep(1/generation_rateS - diff)
+        sleep(1/generation_rate - diff)
 
 def purchase_generator(q, time_client, id, generation_rate):
     print("Start purchase generator ", id)
@@ -40,7 +41,7 @@ def purchase_generator(q, time_client, id, generation_rate):
         q.put(gen_purchase(time_client))
 
         diff = getLocalTime(time_client) - start
-        sleep(1/generation_rateS - diff)
+        sleep(1/generation_rate - diff)
 
 if __name__ == "__main__":
     print("Test purchase_generator")
