@@ -1,16 +1,53 @@
-import random
+from random import randrange
+from our_ntp import getLocalTime
+import ntplib
 
-def gen_userID():
-    return 1
+USER_RANGE  = 1000 #idk
+GEM_RANGE   = 5
+PRICE_RANGE = 100
 
-def gen_gemID():
-    return 2
+def gen_ad(time_client):
+    return (
+        randrange(USER_RANGE),
+        randrange(GEM_RANGE),
+        getLocalTime(time_client)
+    )
 
-def gen_price():
-    return 3
+def gen_purchase(time_client):
+    return (
+        randrange(GEM_RANGE),
+        randrange(PRICE_RANGE),
+        getLocalTime(time_client)
+    )
 
-def gen_ad():
-    return (gen_userID(), gen_gemID())
+def ad_generator(q, time_client, id, generation_rate):
+    print("Start ad generator ", id)
 
-def gen_purchase():
-    return (gen_userID(), gen_gemID(), gen_price())
+    while True:
+        start = getLocalTime(time_client)
+
+        q.put(gen_ad(time_client))
+
+        diff = getLocalTime(time_client) - start
+        sleep(1/generation_rateS - diff)
+
+def purchase_generator(q, time_client, id, generation_rate):
+    print("Start purchase generator ", id)
+
+    while True:
+        start = getLocalTime(time_client)
+
+        q.put(gen_purchase(time_client))
+
+        diff = getLocalTime(time_client) - start
+        sleep(1/generation_rateS - diff)
+
+if __name__ == "__main__":
+    print("Test purchase_generator")
+    for i in range(10):
+        print(gen_purchase(ntplib.NTPClient()))
+
+    print("__________________\nTest ad_generator")
+
+    for i in range(10):
+        print(gen_ad(ntplib.NTPClient()))
