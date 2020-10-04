@@ -7,7 +7,6 @@ import ntplib
 BUDGET = 100
 
 STREAM_RATE  = 10 # Tuples/sec
-TUPLE_SIZE   =
 N_PROCESSES  = 1         # No. producing threads
 
 HOST = "localhost"
@@ -48,9 +47,22 @@ def stream_from_queue(q):
 
                 sleep(1/STREAM_RATE - diff)
 
+def consume_test():
+    print("Start consumer")
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(10)
+        s.connect((HOST, PORT))
+
+        print('Consumer connected by', (HOST, PORT))
+
+        while True:
+            data = s.recv(1024)
+            print("Received: ", int.from_bytes(data, 'big'))
+
 def run():
     q = Queue()
-    ad_generators = [ Process(target=gen_ad, args=(q, ntplib.NTPClient(), i,)) for i in range(N_PROCESSES) ]
+    ad_generators = [ Process(target=gen_ad, args=(q, ntplib.NTPClient(), i,), daemon = True) for i in range(N_PROCESSES) ]
 
     for g in ad_generators:
         g.start()
