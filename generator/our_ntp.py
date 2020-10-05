@@ -6,4 +6,4 @@ def getLocalTime(client = None):
         response = client.request('localhost')
         return response.tx_time
 
-    return datetime.now().total_seconds()
+    return datetime.now()
