@@ -23,27 +23,27 @@ def gen_purchase(time_client):
     return purchase
 
 
-def ad_generator(q, time_client, id, generation_rate):
+def ad_generator(q, time_client, id, rate, budget):
     print("Start ad generator ", id)
 
-    while True:
+    for i in range(budget):
         start = getLocalTime(time_client)
 
         q.put(gen_ad(time_client))
 
         diff = getLocalTime(time_client) - start
-        sleep(max(0, 1/generation_rate - diff))
+        sleep(max(0, 1/rate - diff))
 
-def purchase_generator(q, time_client, id, generation_rate):
+def purchase_generator(q, time_client, id, rate, budget):
     print("Start purchase generator ", id)
 
-    while True:
+    for i in range(budget):
         start = getLocalTime(time_client)
 
         q.put(gen_purchase(time_client))
 
         diff = getLocalTime(time_client) - start
-        sleep(max(0, 1/generation_rate - diff))
+        sleep(max(0, 1/rate - diff))
 
 if __name__ == "__main__":
     print("Test purchase_generator")

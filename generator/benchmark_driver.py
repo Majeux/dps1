@@ -1,15 +1,15 @@
 from multiprocessing import Process, Queue
+from math import ceil
+from sys import argv
 import socket
-from our_ntp import getLocalTime
 import ntplib
-import generator
 
-TEST = False
+from our_ntp import getLocalTime #.py
+import generator #.py
 
-BUDGET = 1000000
-
-GEN_RATE    = 2000 # Tuples/sec
-N_PROCESSES = 2     # No. producing threads
+TEST = False                 #generate data without TCP connection
+PRINT_CONN_STATUS = True    #print messages regarding status of socket connection
+PRINT_CONFIRM_TUPLE = True #print tuples when they are being send
 
 HOST = "localhost"
 PORT = 5555
@@ -22,47 +22,79 @@ def get_purchase_data(q):
     (gid, price, event_time) = q.get()
     results[gid] += price
     purchase = '{{ "gem":{}, "price":{}, "event_time":{} }}\n'.format(gid, price, event_time)
-    print(purchase)
+    if PRINT_CONFIRM_TUPLE:
+        print(purchase)
     return purchase
 
-def stream_from_queue(q):
-    print("Start Streamer")
+def stream_from_queue(q, generators, budget):
+    if PRINT_CONN_STATUS:
+        print("Start Streamer")
 
     time_client = ntplib.NTPClient()
 
     if TEST:
-        for i in range(BUDGET):
+        for g in generators:
+            g.start()
+
+        for i in range(budget):
             data = get_purchase_data(q)
 
-            print("TEST: got", data)
+            if PRINT_CONFIRM_TUPLE:
+                print("TEST: got", data)
     else:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(SOCKET_TIMEOUT) # TODO determine/tweak
             s.bind((HOST, PORT))
             s.listen()
-            print("waiting for connection")
+
+            if PRINT_CONN_STATUS:
+                print("waiting for connection")
+
             conn, addr = s.accept()
 
             with conn:
-                print("Streamer connected by", addr)
+                if PRINT_CONN_STATUS:
+                    print("Streamer connected by", addr)
 
-                for i in range(BUDGET):
+                for g in generators:
+                    g.start()
+
+                for i in range(budget):
                     data = get_purchase_data(q)
 
                     conn.sendall(data.encode())
 
-                    print('Sent tuple #', i)
+                    if PRINT_CONFIRM_TUPLE:
+                        print('Sent tuple #', i)
 
-def run():
+def run(budget, rate, n_generators):
     q = Queue()
-    ad_generators = [ Process(target=generator.purchase_generator, args=(q, ntplib.NTPClient(), i,GEN_RATE,), daemon = True) for i in range(N_PROCESSES) ]
 
-    for g in ad_generators:
-        g.start()
+    ad_generators = [
+        Process(
+            target=generator.purchase_generator,
+            args=(q, ntplib.NTPClient(), i, rate, ceil(budget/n_generators),),
+            daemon = True
+        ) for i in range(n_generators)
+    ]
 
-    stream_from_queue(q)
+    stream_from_queue(q, ad_generators, budget)
+
     for i in range(5):
         print(i, ": ", results[i])
 
 if __name__ == "__main__":
-    run()
+    try:
+        budget       = int(argv[1]) if len(argv) > 1 else 1000000
+        rate         = int(argv[2]) if len(argv) > 2 else 2000
+        n_generators = int(argv[3]) if len(argv) > 3 else 4
+    except ValueError:
+        print("INVALID ARGUMENT TYPE!")
+        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint]`")
+        quit()
+    except:
+        print("ERROR PARSING ARGUMENTS!")
+        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint]`")
+        quit()
+
+    run(budget, rate, n_generators)
