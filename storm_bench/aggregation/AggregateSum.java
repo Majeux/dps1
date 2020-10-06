@@ -23,7 +23,8 @@ import org.apache.storm.mongodb.bolt.MongoInsertBolt;
 import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
 import org.apache.storm.streams.operations.Function;
 import org.apache.storm.tuple.Fields;
-
+import org.apache.storm.utils.TupleUtils;
+import org.apache.storm.mongodb.common.mapper.MongoMapper;
 
 // AUXILLIARY
 import java.util.List;
@@ -38,6 +39,19 @@ import org.apache.commons.net.ntp.TimeStamp;
 import java.net.InetAddress;
 
 public class AggregateSum {
+
+    public static class TickAwareMongoBolt extends MongoInsertBolt {
+        public TickAwareMongoBolt(String url, String collectionName, MongoMapper mapper) {
+            super(url, collectionName, mapper);
+        }
+        @Override
+        public void execute(Tuple tuple) {
+            if(!TupleUtils.isTick(tuple)) super.execute(tuple);
+            else {System.out.println("LEL wat moet je met al die ticks");}
+        }
+    }
+
+
     static List<String> fields = Arrays.asList("gem", "price", "event_time");
 
     public static void main(String[] args) {
@@ -51,12 +65,13 @@ public class AggregateSum {
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency");
-        MongoInsertBolt mongoBolt = new MongoInsertBolt(mongo_addr, "aggregation", mongoMapper);
+        TickAwareMongoBolt mongoBolt = new TickAwareMongoBolt(mongo_addr, "aggregation", mongoMapper);
 
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(new SocketSpout(new JsonScheme(fields), input_IP, Integer.parseInt(input_PORT)))
-            .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
+            //.window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
+            .window(SlidingWindows.of(Count.of(10), Count.of(10)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
 	        .aggregateByKey(new Sum())
             .map(new toOutputTuple(NTP_IP))
@@ -65,7 +80,7 @@ public class AggregateSum {
         // Build config and submit
 	    Config config = new Config();
 	    config.setNumWorkers(num_workers);
-        config.setDebug(true);
+        //config.setDebug(true);
 	   	try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
 	   	catch(AlreadyAliveException e) { System.out.println("Already alive"); }
 	   	catch(InvalidTopologyException e) { System.out.println("Invalid topolgy"); }
@@ -78,7 +93,6 @@ public class AggregateSum {
     // Mongo entry
     // {GemID, aggregate, latency}
     private static class toOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
-        Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
         String NTP_IP = "";
 
         public toOutputTuple(String _NTP_IP) {
@@ -109,12 +123,18 @@ public class AggregateSum {
 
         @Override
         public SimpleTuple apply(Pair<Integer, Values> input) {
+            Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
+            
+            System.out.println("FIELDS: " + outputFields.toString());
+
             int gemID = input.getFirst();
             String aggregate = Integer.toString(input.getSecond().price);
             Double lowest_event_time = input.getSecond().event_time;
             String latency = Double.toString(currentTime() - lowest_event_time);
             
-            return new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
+            SimpleTuple tuple = new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
+            
+            return tuple;
         }
     }
 
