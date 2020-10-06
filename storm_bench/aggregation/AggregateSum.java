@@ -34,7 +34,8 @@ import java.io.IOException;
 import org.apache.commons.net.ntp.NTPUDPClient;
 import java.net.SocketException;
 import org.apache.commons.net.ntp.TimeInfo;
-
+import org.apache.commons.net.ntp.TimeStamp;
+import java.net.InetAddress;
 
 public class AggregateSum {
     static List<String> fields = Arrays.asList("gem", "price", "event_time");
@@ -71,6 +72,11 @@ public class AggregateSum {
 	   	catch(AuthorizationException e) { System.out.println("Auth problem"); }
  	}
 
+    // Aggregate result:
+    // {gemID, Values = {price, event_time}}
+    // =>
+    // Mongo entry
+    // {GemID, aggregate, latency}
     private static class toOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
         final NTPUDPClient client = new NTPUDPClient();
@@ -83,10 +89,21 @@ public class AggregateSum {
         }
 
         private Double currentTime() {
-            TimeInfo time;
-            try { time = client.getTime(NTP_IP); } 
+            Double time = 0.0;
+            try { 
+                TimeStamp recv_time = client
+                    .getTime(InetAddress.getByName(NTP_IP))
+                    .getMessage()
+                    .getReceiveTimeStamp();
+                
+                Double integer_part = new Long(recv_time.getSeconds()).doubleValue();
+                Double fraction = new Long(recv_time.getFraction()).doubleValue() / 0xFFFFFFFF;
+                
+                return integer_part + fraction;
+            } 
             catch (IOException ioe) { System.out.println("Could not get time from NTP server"); }
-            return 0.0
+            // NTP request has failed 
+            return 0.0;
         }
 
         @Override
@@ -96,14 +113,7 @@ public class AggregateSum {
             Double lowest_event_time = input.getSecond().event_time;
             String latency = Double.toString(currentTime() - lowest_event_time);
             
-
-            return new SimpleTuple(outputFields,
-                Arrays.asList(
-                    input.getFirst(),
-                    Integer.toString(input.getSecond().price),
-                    Double.toString(input.getSecond().event_time)
-                )
-            );
+            return new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
         }
     }
 
