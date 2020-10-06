@@ -24,12 +24,17 @@ import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
 import org.apache.storm.streams.operations.Function;
 import org.apache.storm.tuple.Fields;
 
+
 // AUXILLIARY
 import java.util.List;
 import java.util.Arrays;
 import java.lang.Math;
 import java.io.FileWriter;
 import java.io.IOException;
+import org.apache.commons.net.ntp.NTPUDPClient;
+import java.net.SocketException;
+import org.apache.commons.net.ntp.TimeInfo;
+
 
 public class AggregateSum {
     static List<String> fields = Arrays.asList("gem", "price", "event_time");
@@ -39,10 +44,11 @@ public class AggregateSum {
         String input_IP = args[0];
         String input_PORT = args[1];
         String mongo_IP = args[2];
-        String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
-        Integer num_workers = Integer.parseInt(args[3]);
-
+        String NTP_IP = args[3];
+        Integer num_workers = Integer.parseInt(args[4]);
+        
         // Mongo bolt to store the results
+        String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency");
         MongoInsertBolt mongoBolt = new MongoInsertBolt(mongo_addr, "aggregation", mongoMapper);
 
@@ -52,7 +58,7 @@ public class AggregateSum {
             .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
 	        .aggregateByKey(new Sum())
-            .map(new toOutputTuple())
+            .map(new toOutputTuple(NTP_IP))
             .to(mongoBolt);
 
         // Build config and submit
@@ -65,18 +71,32 @@ public class AggregateSum {
 	   	catch(AuthorizationException e) { System.out.println("Auth problem"); }
  	}
 
-    private static class Print implements Consumer<Pair<Integer, Values>> {
-        @Override
-        public void accept(Pair<Integer, Values> input) {
-            System.out.println("GemID: " + input.getFirst() + input.getSecond().print());
-        }
-    }
-
     private static class toOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
+        final NTPUDPClient client = new NTPUDPClient();
+        String NTP_IP = "";
+
+        public toOutputTuple(String _NTP_IP) {
+            NTP_IP = _NTP_IP;
+            try { client.open(); }
+            catch (final SocketException e) { System.out.println("Could not establish NTP connection"); }
+        }
+
+        private Double currentTime() {
+            TimeInfo time;
+            try { time = client.getTime(NTP_IP); } 
+            catch (IOException ioe) { System.out.println("Could not get time from NTP server"); }
+            return 0.0
+        }
 
         @Override
         public SimpleTuple apply(Pair<Integer, Values> input) {
+            int gemID = input.getFirst();
+            String aggregate = Integer.toString(input.getSecond().price);
+            Double lowest_event_time = input.getSecond().event_time;
+            String latency = Double.toString(currentTime() - lowest_event_time);
+            
+
             return new SimpleTuple(outputFields,
                 Arrays.asList(
                     input.getFirst(),
