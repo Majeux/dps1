@@ -79,16 +79,17 @@ public class AggregateSum {
     // {GemID, aggregate, latency}
     private static class toOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
-        final NTPUDPClient client = new NTPUDPClient();
         String NTP_IP = "";
 
         public toOutputTuple(String _NTP_IP) {
             NTP_IP = _NTP_IP;
-            try { client.open(); }
-            catch (final SocketException e) { System.out.println("Could not establish NTP connection"); }
         }
 
         private Double currentTime() {
+            final NTPUDPClient client = new NTPUDPClient();
+            try { client.open(); }
+            catch (final SocketException e) { System.out.println("Could not establish NTP connection"); }
+
             Double time = 0.0;
             try { 
                 TimeStamp recv_time = client
@@ -96,8 +97,8 @@ public class AggregateSum {
                     .getMessage()
                     .getReceiveTimeStamp();
                 
-                Double integer_part = new Long(recv_time.getSeconds()).doubleValue();
-                Double fraction = new Long(recv_time.getFraction()).doubleValue() / 0xFFFFFFFF;
+                Double integer_part = Long.valueOf(recv_time.getSeconds()).doubleValue();
+                Double fraction = Long.valueOf(recv_time.getFraction()).doubleValue() / 0xFFFFFFFF;
                 
                 return integer_part + fraction;
             } 
