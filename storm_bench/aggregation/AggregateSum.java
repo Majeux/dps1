@@ -37,6 +37,8 @@ import java.net.SocketException;
 import org.apache.commons.net.ntp.TimeInfo;
 import org.apache.commons.net.ntp.TimeStamp;
 import java.net.InetAddress;
+import java.time.Instant;
+
 
 public class AggregateSum {
 
@@ -96,11 +98,10 @@ public class AggregateSum {
 	   	catch(AuthorizationException e) { System.out.println("Auth problem"); }
  	}
 
-    // Aggregate result:
-    // {gemID, Values = {price, event_time}}
+    // Map aggregation tuples to a nice output format:
+    // Aggregate result: {gemID, Values = {price, event_time}}
     // =>
-    // Mongo entry
-    // {GemID, aggregate, latency}
+    // Mongo entry: {GemID, aggregate, latency}
     private static class toOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
         String NTP_IP = "";
 
@@ -108,7 +109,8 @@ public class AggregateSum {
             NTP_IP = _NTP_IP;
         }
 
-        private Double currentTime() {
+        // Gets time from NTP server
+        private Double currentNTPTime() {
             final NTPUDPClient client = new NTPUDPClient();
             try { client.open(); }
             catch (final SocketException e) { System.out.println("Could not establish NTP connection"); }
@@ -128,6 +130,12 @@ public class AggregateSum {
             catch (IOException ioe) { System.out.println("Could not get time from NTP server"); }
             // NTP request has failed 
             return 0.0;
+        }
+
+        // Gets time from system clock
+        private Double currentTime() {
+            Instant time = Instant.now();
+            return Double.valueOf(time.getEpochSecond()) + Double.valueOf(time.getNano()) / (1000.0*1000*1000);
         }
 
         @Override
