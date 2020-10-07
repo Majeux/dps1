@@ -3,7 +3,7 @@ package aggregation;
 // STORM
 import org.apache.storm.streams.Stream;
 import org.apache.storm.streams.StreamBuilder;
-import org.apache.storm.sql.runtime.datasource.socket.spout.SocketSpout; // todo: implement
+import org.apache.storm.sql.runtime.datasource.socket.spout.SocketSpout;
 import org.apache.storm.sql.runtime.serde.json.JsonScheme;
 import org.apache.storm.spout.RawScheme;
 import org.apache.storm.Config;
@@ -46,6 +46,12 @@ public class AggregateSum {
         }
         @Override
         public void execute(Tuple tuple) {
+            System.out.println("FIELDS: " + tuple.getFields().toString());
+
+            if(tuple.contains("value")) {
+                System.out.println(tuple.getValueByField("value"));
+            }
+
             if(!TupleUtils.isTick(tuple)) super.execute(tuple);
             else {System.out.println("LEL wat moet je met al die ticks");}
         }
@@ -71,14 +77,17 @@ public class AggregateSum {
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(new SocketSpout(new JsonScheme(fields), input_IP, Integer.parseInt(input_PORT)))
             //.window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
-            .window(SlidingWindows.of(Count.of(10), Count.of(10)))
+            .window(SlidingWindows.of(Count.of(8), Count.of(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
 	        .aggregateByKey(new Sum())
+            //.peek(s -> System.out.println("GemID: " + Integer.toString(s.getFirst()) + ", "+ s.getSecond().print() ))
             .map(new toOutputTuple(NTP_IP))
+            .peek(s -> System.out.println(s.getFields().toString()))
             .to(mongoBolt);
 
         // Build config and submit
 	    Config config = new Config();
+        config.setMaxSpoutPending(15);
 	    config.setNumWorkers(num_workers);
         //config.setDebug(true);
 	   	try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
@@ -123,17 +132,17 @@ public class AggregateSum {
 
         @Override
         public SimpleTuple apply(Pair<Integer, Values> input) {
+            System.out.println("apply?");
+
             Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
             
-            System.out.println("FIELDS: " + outputFields.toString());
-
             int gemID = input.getFirst();
             String aggregate = Integer.toString(input.getSecond().price);
             Double lowest_event_time = input.getSecond().event_time;
             String latency = Double.toString(currentTime() - lowest_event_time);
             
             SimpleTuple tuple = new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
-            
+            System.out.println("MADE NEW OUTPUT TUPLE");            
             return tuple;
         }
     }
