@@ -19,13 +19,17 @@ def get_reservation_info():
     return result.split()
 
 
-if len(sys.argv) < 2:
-        print("You must supply a number of worker nodes")
+if len(sys.argv) < 3:
+        print("You must supply a number of worker nodes, and a data generation speed")
         exit()
 
 # Read command line args
 num_workers = int(sys.argv[1])
-print("Benchmarking with " + sys.argv[1] + " workers")
+if num_workers < 4:
+    print("Too few nodes reserved")
+
+gen_rate = int(sys.argv[2])
+print("Benchmarking generation rate ", gen_rate, " on ", num_workers, " workers")
 
 # Reserve the nodes
 os.system("preserve -# " + str(num_workers + 2) + " -t 00:15:00")
@@ -54,4 +58,7 @@ while reservation_status != "R":
         os.system("preserve -c " + reservation_id)
 
 # If we've gotten here, the reservation is ready
-generator = deploy_all(reserved_nodes)
+print("Got reservation on nodes: ", reserved_nodes)
+print("Deploying cluster.")
+
+generator = deploy_all(reserved_nodes, reservation_id)

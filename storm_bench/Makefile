@@ -16,7 +16,7 @@ ZK_ADDRESS		= localhost
 
 all: build
 
-build:
+build: $(SRC_DIR)/$(JAR_MAIN)
 	make clean
 	javac -cp $(COMPILE_LIBS) $(SRC_DIR)/$(JAR_MAIN)
 	jar cvf $(JAR_NAME) $(SRC_DIR)
