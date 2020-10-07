@@ -1,6 +1,0 @@
-#!/bin/bash
-
-screen -d -m -S nimbus ~/Documents/DPS/storm/bin/storm nimbus
-screen -d -m -S supervisor ~/Documents/DPS/storm/bin/storm supervisor
-screen -d -m -S mongo mongo
-
