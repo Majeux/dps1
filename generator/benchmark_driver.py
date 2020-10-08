@@ -1,12 +1,13 @@
 from multiprocessing import Process, Queue
-from queue import Empty as queueEmpty
+from queue import Empty as queueEmptyError
+from time import sleep
 from math import ceil
 from sys import argv
 import socket
 import ntplib
-from time import sleep
 
-import generator #.py
+#.py
+import generator
 
 # TODO kijk naar  timeouts thresholds
 # TODO log queue sizes op interval
@@ -15,7 +16,7 @@ STOP_TOKEN = "_STOP_"
 
 class BenchmarkDriver:
     # statics
-    TEST = False                 #generate data without TCP connection
+    TEST = True                 #generate data without TCP connection
     PRINT_CONN_STATUS = True    #print messages regarding status of socket connection
     PRINT_CONFIRM_TUPLE = True #print tuples when they are being send
 
@@ -26,21 +27,23 @@ class BenchmarkDriver:
     QUEUE_MAX = 2000    # TODO configure
     GET_TIMEOUT = 0.01
 
+    QUEUE_LOG_INTERVAL = 10 # TODO configure
+
     # Object variables
     #   q: Queue        --
     #   error_q: Queue  -- Communicates error from child to BenchmarkDriver
     #   generators: Process(generator.purchase_generator)
     #   budget: int
     #   generation_rate: int
-    #   results: dictionary
-    #   q_size_data: [int]
+    #   results: [int]
+    #   q_size_log: [int]
 
     def __init__(self, budget, rate, n_generators, ntp_address):
         self.q = Queue(self.QUEUE_MAX)
         self.error_q = Queue()
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
-        self.q_size_data = []
+        self.q_size_log = []
 
         sub_rate = rate/n_generators
         sub_budget = ceil(budget/n_generators) # overestimate with at most n_generators
@@ -64,7 +67,7 @@ class BenchmarkDriver:
 
         try:
             (gid, price, event_time) = self.q.get(timeout=self.GET_TIMEOUT)
-        except queueEmpty as e:
+        except queueEmptyError as e:
             raise RuntimeError('Streamer timed out getting from queue') from e
 
         purchase = '{{ "gem":{}, "price":{}, "event_time":{} }}\n'.format(gid, price, event_time)
@@ -81,9 +84,13 @@ class BenchmarkDriver:
         else:
             self.stream_from_queue()
 
-            if self.PRINT_CONFIRM_TUPLE:
-                for i, r in enumerate(self.results):
-                    print(i, ": ", r)
+        if self.PRINT_CONFIRM_TUPLE:
+            for i, r in enumerate(self.results):
+                print(i, ": ", r)
+
+        if self.PRINT_CONFIRM_TUPLE:
+            for i, r in enumerate(self.q_size_log):
+                print(i*10, ": ", r)
 
 
     def stream_test(self):
@@ -95,6 +102,9 @@ class BenchmarkDriver:
 
             if data == STOP_TOKEN:
                 raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
+
+            if i % self.QUEUE_LOG_INTERVAL == 0:
+                self.q_size_log.append(self.q.qsize())
 
             if self.PRINT_CONFIRM_TUPLE:
                 print("TEST: got", data)
@@ -127,6 +137,9 @@ class BenchmarkDriver:
                         raise RuntimeError("Exception raised by generator")
 
                     conn.sendall(data.encode())
+
+                    if i % self.QUEUE_LOG_INTERVAL == 0:
+                        self.q_size_log.append(self.q.qsize())
 
                     if self.PRINT_CONFIRM_TUPLE:
                         print('Sent tuple #', i)
