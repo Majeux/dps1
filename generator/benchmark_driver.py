@@ -17,7 +17,7 @@ class BenchmarkDriver:
     HOST = "localhost"
     PORT = 5555
 
-    QUEUE_MAX = 1000 # TODO configure
+    QUEUE_MAX = 1000    # TODO configure
     GET_TIMEOUT = 0.1
 
     # Object variables
