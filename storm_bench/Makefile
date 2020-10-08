@@ -9,7 +9,6 @@ JAR_NAME		= ./aggregate.jar
 INPUT_ADRESS	= localhost
 INPUT_PORT		= 5555
 MONGO_ADRESS	= localhost
-NTP_ADDRESS		= localhost
 NUM_WORKERS		= 1
 NIMBUS_ADDRESS	= localhost
 ZK_ADDRESS		= localhost
@@ -27,7 +26,7 @@ submit: build
 	-c storm.zookeeper.servers="[\"$(ZK_ADDRESS)\"]" \
 	-c nimbus.seeds="[\"$(NIMBUS_ADDRESS)\"]" \
 	--jars $(RUN_LIBS) $(JAR_NAME) aggregation.AggregateSum \
-	$(INPUT_ADRESS) $(INPUT_PORT) $(MONGO_ADRESS) $(NTP_ADDRESS) $(NUM_WORKERS) 
+	$(INPUT_ADRESS) $(INPUT_PORT) $(MONGO_ADRESS) $(NUM_WORKERS) $(NTP_ADDRESS) 
 
 kill:
 	storm kill "agsum"
