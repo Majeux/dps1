@@ -16,7 +16,7 @@ STOP_TOKEN = "_STOP_"
 
 class BenchmarkDriver:
     # statics
-    TEST = True                 #generate data without TCP connection
+    TEST = False                 #generate data without TCP connection
     PRINT_CONN_STATUS = True    #print messages regarding status of socket connection
     PRINT_CONFIRM_TUPLE = True #print tuples when they are being send
 
@@ -58,6 +58,73 @@ class BenchmarkDriver:
             args=(self.q, self.error_q, (ntp_clients[i]), i, sub_rate, sub_budget,),
             daemon = True)
         for i in range(n_generators) ]
+    # end -- def __init__
+
+    def run(self):
+        if self.TEST:
+            self.stream_test()
+        else:
+            self.stream_from_queue()
+
+        if self.PRINT_CONFIRM_TUPLE:
+            for i, r in enumerate(self.results):
+                print(i, ": ", r)
+
+        if self.PRINT_CONFIRM_TUPLE:
+            for i, r in enumerate(self.q_size_log):
+                print(i*10, ": ", r)
+    # end -- def run
+
+    def consume_loop(self, consume_f, args):
+        for g in self.generators:
+            g.start()
+
+        for i in range(self.budget):
+            data = self.get_purchase_data()
+
+            if data == STOP_TOKEN:
+                raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
+
+            if i % self.QUEUE_LOG_INTERVAL == 0:
+                self.q_size_log.append(self.q.qsize())
+
+            consume_f(data, *args)
+    # end -- def consume_loop
+
+    def stream_test(self):
+        def print_to_terminal(data):
+            if self.PRINT_CONFIRM_TUPLE:
+                print("TEST: got", data)
+
+        self.consume_loop(print_to_terminal, ())
+    # end -- def stream_test
+
+    def stream_from_queue(self):
+        def send(data, c):
+            c.sendall(data.encode())
+
+            if self.PRINT_CONFIRM_TUPLE:
+                print('Sent tuple #', i)
+
+        if self.PRINT_CONN_STATUS:
+            print("Start Streamer")
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(self.SOCKET_TIMEOUT) # TODO determine/tweak
+            s.bind((self.HOST, self.PORT))
+            s.listen()
+
+            if self.PRINT_CONN_STATUS:
+                print("waiting for connection")
+
+            conn, addr = s.accept()
+
+            with conn:
+                if self.PRINT_CONN_STATUS:
+                    print("Streamer connected by", addr)
+
+                self.consume_loop(send, conn)
+    # end -- def stream_from_queue
 
     def get_purchase_data(self):
         try: #check for errors from generators
@@ -77,73 +144,7 @@ class BenchmarkDriver:
             print(purchase)
 
         return purchase
-
-    def run(self):
-        if self.TEST:
-            self.stream_test()
-        else:
-            self.stream_from_queue()
-
-        if self.PRINT_CONFIRM_TUPLE:
-            for i, r in enumerate(self.results):
-                print(i, ": ", r)
-
-        if self.PRINT_CONFIRM_TUPLE:
-            for i, r in enumerate(self.q_size_log):
-                print(i*10, ": ", r)
-
-
-    def stream_test(self):
-        for g in self.generators:
-            g.start()
-
-        for i in range(self.budget):
-            data = self.get_purchase_data()
-
-            if data == STOP_TOKEN:
-                raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
-
-            if i % self.QUEUE_LOG_INTERVAL == 0:
-                self.q_size_log.append(self.q.qsize())
-
-            if self.PRINT_CONFIRM_TUPLE:
-                print("TEST: got", data)
-
-    def stream_from_queue(self):
-        if self.PRINT_CONN_STATUS:
-            print("Start Streamer")
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(self.SOCKET_TIMEOUT) # TODO determine/tweak
-            s.bind((self.HOST, self.PORT))
-            s.listen()
-
-            if self.PRINT_CONN_STATUS:
-                print("waiting for connection")
-
-            conn, addr = s.accept()
-
-            with conn:
-                if self.PRINT_CONN_STATUS:
-                    print("Streamer connected by", addr)
-
-                for g in self.generators:
-                    g.start()
-
-                for i in range(selfbudget):
-                    data = self.get_purchase_data()
-
-                    if data == "STOP":
-                        raise RuntimeError("Exception raised by generator")
-
-                    conn.sendall(data.encode())
-
-                    if i % self.QUEUE_LOG_INTERVAL == 0:
-                        self.q_size_log.append(self.q.qsize())
-
-                    if self.PRINT_CONFIRM_TUPLE:
-                        print('Sent tuple #', i)
-
+    # end -- def get_purchase_data
 
 if __name__ == "__main__":
     try:
