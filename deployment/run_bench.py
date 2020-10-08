@@ -18,10 +18,15 @@ def get_reservation_info():
         raise Exception("Multiple reservations found")
     return result.split()
 
+def cancel_reservation(reservation_id):
+    print("Cancelling reservation")
+    os.system("preserve -c " + reservation_id)
+	
+
 
 if len(sys.argv) < 3:
-        print("You must supply a number of worker nodes, and a data generation speed")
-        exit()
+    print("You must supply a number of worker nodes, and a data generation speed")
+    exit()
 
 # Read command line args
 num_workers = int(sys.argv[1])
@@ -32,7 +37,7 @@ gen_rate = int(sys.argv[2])
 print("Benchmarking generation rate ", gen_rate, " on ", num_workers, " workers")
 
 # Reserve the nodes
-os.system("preserve -# " + str(num_workers + 2) + " -t 00:15:00")
+os.system("preserve -# " + str(num_workers + 3) + " -t 00:15:00")
 time.sleep(1)
 try:
     reservation = get_reservation_info()
@@ -55,9 +60,10 @@ while reservation_status != "R":
 
     # If it's taking too long, cancel the reservation
     if cur_waiting_time > MAX_WAIT_TIME:
-        os.system("preserve -c " + reservation_id)
+        cancel_reservation(reservation_id)
 
 # If we've gotten here, the reservation is ready
 print("Got reservation on nodes: ", reserved_nodes)
 print("Deploying cluster.")
-deploy_all(reserved_nodes, reservation_id)
+
+deploy_all(reserved_nodes, gen_rate, reservation_id)
