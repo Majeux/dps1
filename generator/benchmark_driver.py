@@ -1,4 +1,5 @@
 from multiprocessing import Process, Queue
+from queue import Empty as queueEmpty
 from math import ceil
 from sys import argv
 import socket
@@ -8,7 +9,7 @@ import generator #.py
 
 class BenchmarkDriver:
     # statics
-    TEST = True                 #generate data without TCP connection
+    TEST = False                 #generate data without TCP connection
     PRINT_CONN_STATUS = True    #print messages regarding status of socket connection
     PRINT_CONFIRM_TUPLE = True #print tuples when they are being send
 
@@ -16,7 +17,10 @@ class BenchmarkDriver:
     HOST = "localhost"
     PORT = 5555
 
-    # self.
+    QUEUE_MAX = 1000    # TODO configure
+    GET_TIMEOUT = 0.1
+
+    # Object variables
     #   q: Queue
     #   generators: Process(generator.purchase_generator)
     #   budget: int
@@ -25,7 +29,7 @@ class BenchmarkDriver:
     #   q_size_data: [int]
 
     def __init__(self, budget, rate, n_generators, ntp_address):
-        self.q = Queue()
+        self.q = Queue(self.QUEUE_MAX)
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
         self.q_size_data = []
@@ -33,13 +37,20 @@ class BenchmarkDriver:
         sub_rate = rate/n_generators
         sub_budget = ceil(budget/n_generators) # overestimate with at most n_generators
 
+        if ntp_address == None:
+            ntp_clients = [None] * n_generators
+        else:
+            ntp_clients = [ (ntplib.NTPClient(), ntp_address) ]  * n_generators
+
         self.generators = [
-            Process(target=generator.purchase_generator, args=(self.q, (ntplib.NTPClient(), ntp_address), i, sub_rate, sub_budget,), daemon = True)
-            for i in range(n_generators)
-        ]
+            Process(target=generator.purchase_generator, args=(self.q, (ntp_clients[i]), i, sub_rate, sub_budget,), daemon = True)
+        for i in range(n_generators) ]
 
     def get_purchase_data(self):
-        (gid, price, event_time) = self.q.get()
+        try:
+            (gid, price, event_time) = self.q.get(timeout=self.GET_TIMEOUT)
+        except queueEmpty as e:
+            raise RuntimeError('Streamer timed out getting from queue') from e
 
         purchase = '{{ "gem":{}, "price":{}, "event_time":{} }}\n'.format(gid, price, event_time)
 
@@ -59,6 +70,7 @@ class BenchmarkDriver:
                 for i, r in enumerate(self.results):
                     print(i, ": ", r)
 
+
     def stream_test(self):
         for g in self.generators:
             g.start()
@@ -72,8 +84,6 @@ class BenchmarkDriver:
     def stream_from_queue(self):
         if self.PRINT_CONN_STATUS:
             print("Start Streamer")
-
-        time_client = ntplib.NTPClient()
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(self.SOCKET_TIMEOUT) # TODO determine/tweak
@@ -106,14 +116,14 @@ if __name__ == "__main__":
         budget       = int(argv[1]) if len(argv) > 1 else 1000000
         rate         = int(argv[2]) if len(argv) > 2 else 2000
         n_generators = int(argv[3]) if len(argv) > 3 else 4
-        ntp_address  = argv[4]      if len(argv) > 4 else "localhost"
+        ntp_address  = argv[4]      if len(argv) > 4 else None
     except ValueError:
         print("INVALID ARGUMENT TYPE!")
-        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint]`")
+        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint] [ntp_address: string]`")
         quit()
     except:
         print("ERROR PARSING ARGUMENTS!")
-        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint]`")
+        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint] [ntp_address: string]`")
         quit()
 
     driver = BenchmarkDriver(budget, rate, n_generators, ntp_address)

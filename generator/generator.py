@@ -1,11 +1,14 @@
 from random import randrange
 from time import sleep
 from our_ntp import getLocalTime
+from queue import Full as queueFull
 import ntplib
 
 USER_RANGE  = 1000 #idk
 GEM_RANGE   = 5
 PRICE_RANGE = 10
+
+PUT_TIMEOUT = 0 #TODO probably very low?
 
 def gen_ad(time_client):
     return (
@@ -29,7 +32,10 @@ def ad_generator(q, time_client, id, rate, budget):
     for i in range(budget):
         start = getLocalTime(time_client)
 
-        q.put(gen_ad(time_client))
+        try:
+            q.put(gen_ad(time_client), PUT_TIMEOUT)
+        except queueFull as e:
+            raise RuntimeError("Generator reached Queue threshold") from e
 
         diff = getLocalTime(time_client) - start
         sleep(max(0, 1/rate - diff))
@@ -40,7 +46,11 @@ def purchase_generator(q, time_client, id, rate, budget):
     for i in range(budget):
         start = getLocalTime(time_client)
 
-        q.put(gen_purchase(time_client))
+        try:
+            q.put(gen_purchase(time_client), PUT_TIMEOUT)
+        except queueFull as e:
+            raise RuntimeError("Generator reached Queue threshold") from e
+
 
         diff = getLocalTime(time_client) - start
         sleep(max(0, 1/rate - diff))

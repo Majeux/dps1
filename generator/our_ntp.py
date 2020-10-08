@@ -1,4 +1,4 @@
-from datetime import datetime
+from time import time
 import ntplib
 
 def getLocalTime(ntp = None):
@@ -7,4 +7,4 @@ def getLocalTime(ntp = None):
         response = client.request(address)
         return response.recv_time
 
-    return datetime.now()
+    return time()
