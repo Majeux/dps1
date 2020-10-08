@@ -37,7 +37,7 @@ def deploy_generator(node, gen_rate, reservation_id):
 
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -d -m python3 /home/ddps2016/dps1/generator/benchmark_driver.py " + \
+	" 'screen -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
