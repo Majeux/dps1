@@ -15,7 +15,6 @@ import org.apache.storm.topology.base.BaseWindowedBolt.Duration;
 import org.apache.storm.streams.Pair;
 import org.apache.storm.generated.*;
 import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
-import org.apache.storm.mongodb.common.mapper.MongoMapper;
 
 // AUXILLIARY
 import java.util.Arrays;
@@ -37,7 +36,7 @@ public class AggregateSum {
         // Socket spout to get input tuples
         JsonScheme inputScheme = new JsonScheme(Arrays.asList("gem", "price", "event_time"));
         SocketSpout sSpout = new SocketSpout(inputScheme, input_IP, Integer.parseInt(input_port));
-        
+
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency");
@@ -55,9 +54,9 @@ public class AggregateSum {
         // Build config and submit
 	    Config config = new Config();
         config.setMaxSpoutPending(15);
-	    config.setNumWorkers(num_workers);
+        config.setNumWorkers(num_workers);
         //config.setDebug(true);
-	   	
+
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
 	   	catch(AlreadyAliveException e) { System.out.println("Already alive"); }
 	   	catch(InvalidTopologyException e) { System.out.println("Invalid topolgy"); }
