@@ -3,6 +3,7 @@ COMPILE_LIBS	= $(shell find compile_libs/ -name "*.jar" | sed ':a;N;$$!ba;s/\n/:
 RUN_LIBS		= $(shell find run_libs/ -name "*.jar" | sed ':a;N;$$!ba;s/\n/,/g')
 SRC_DIR			= ./aggregation
 JAR_MAIN		= AggregateSum.java
+SRC_FILES		= $(shell find aggregation/ -name "*.java")
 JAR_NAME		= ./aggregate.jar
 
 # Command line arguments
@@ -18,7 +19,7 @@ all: build
 
 build: $(SRC_DIR)/$(JAR_MAIN)
 	make clean
-	javac -cp $(COMPILE_LIBS) $(SRC_DIR)/$(JAR_MAIN)
+	javac -cp $(COMPILE_LIBS) $(SRC_FILES)
 	jar cvf $(JAR_NAME) $(SRC_DIR)
 
 # class, input_address, input_port, mongo_address, NTP_address, num_workers
