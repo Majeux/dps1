@@ -2,6 +2,7 @@ from random import randrange
 from time import sleep
 from our_ntp import getLocalTime
 from queue import Full as queueFull
+from benchmark_driver import STOP_TOKEN
 import ntplib
 
 USER_RANGE  = 1000 #idk
@@ -26,7 +27,7 @@ def gen_purchase(time_client):
     return purchase
 
 
-def ad_generator(q, time_client, id, rate, budget):
+def ad_generator(q, error, time_client, id, rate, budget):
     print("Start ad generator ", id)
 
     for i in range(budget):
@@ -35,12 +36,13 @@ def ad_generator(q, time_client, id, rate, budget):
         try:
             q.put(gen_ad(time_client), PUT_TIMEOUT)
         except queueFull as e:
-            raise RuntimeError("Generator reached Queue threshold") from e
+            error.put(STOP_TOKEN)
+            raise RuntimeError("\n\tGenerator-{}reached Queue threshold\n".format(id)) from e
 
         diff = getLocalTime(time_client) - start
         sleep(max(0, 1/rate - diff))
 
-def purchase_generator(q, time_client, id, rate, budget):
+def purchase_generator(q, error, time_client, id, rate, budget):
     print("Start purchase generator ", id)
 
     for i in range(budget):
@@ -49,7 +51,8 @@ def purchase_generator(q, time_client, id, rate, budget):
         try:
             q.put(gen_purchase(time_client), PUT_TIMEOUT)
         except queueFull as e:
-            raise RuntimeError("Generator reached Queue threshold") from e
+            error.put(STOP_TOKEN)
+            raise RuntimeError("\n\tGenerator-{} reached Queue threshold\n".format(id)) from e
 
 
         diff = getLocalTime(time_client) - start

@@ -4,8 +4,14 @@ from math import ceil
 from sys import argv
 import socket
 import ntplib
+from time import sleep
 
 import generator #.py
+
+# TODO kijk naar  timeouts thresholds
+# TODO log queue sizes op interval
+
+STOP_TOKEN = "_STOP_"
 
 class BenchmarkDriver:
     # statics
@@ -17,11 +23,12 @@ class BenchmarkDriver:
     HOST = "localhost"
     PORT = 5555
 
-    QUEUE_MAX = 1000    # TODO configure
-    GET_TIMEOUT = 0.1
+    QUEUE_MAX = 2000    # TODO configure
+    GET_TIMEOUT = 0.01
 
     # Object variables
-    #   q: Queue
+    #   q: Queue        --
+    #   error_q: Queue  -- Communicates error from child to BenchmarkDriver
     #   generators: Process(generator.purchase_generator)
     #   budget: int
     #   generation_rate: int
@@ -30,6 +37,7 @@ class BenchmarkDriver:
 
     def __init__(self, budget, rate, n_generators, ntp_address):
         self.q = Queue(self.QUEUE_MAX)
+        self.error_q = Queue()
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
         self.q_size_data = []
@@ -43,10 +51,17 @@ class BenchmarkDriver:
             ntp_clients = [ (ntplib.NTPClient(), ntp_address) ]  * n_generators
 
         self.generators = [
-            Process(target=generator.purchase_generator, args=(self.q, (ntp_clients[i]), i, sub_rate, sub_budget,), daemon = True)
+            Process(target=generator.purchase_generator,
+            args=(self.q, self.error_q, (ntp_clients[i]), i, sub_rate, sub_budget,),
+            daemon = True)
         for i in range(n_generators) ]
 
     def get_purchase_data(self):
+        try: #check for errors from generators
+            return self.error_q.get_nowait()
+        except Exception:
+            pass # There was no error raised
+
         try:
             (gid, price, event_time) = self.q.get(timeout=self.GET_TIMEOUT)
         except queueEmpty as e:
@@ -78,6 +93,9 @@ class BenchmarkDriver:
         for i in range(self.budget):
             data = self.get_purchase_data()
 
+            if data == STOP_TOKEN:
+                raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
+
             if self.PRINT_CONFIRM_TUPLE:
                 print("TEST: got", data)
 
@@ -104,6 +122,9 @@ class BenchmarkDriver:
 
                 for i in range(selfbudget):
                     data = self.get_purchase_data()
+
+                    if data == "STOP":
+                        raise RuntimeError("Exception raised by generator")
 
                     conn.sendall(data.encode())
 
