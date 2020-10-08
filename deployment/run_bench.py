@@ -60,5 +60,4 @@ while reservation_status != "R":
 # If we've gotten here, the reservation is ready
 print("Got reservation on nodes: ", reserved_nodes)
 print("Deploying cluster.")
-
-generator = deploy_all(reserved_nodes, reservation_id)
+deploy_all(reserved_nodes, reservation_id)
