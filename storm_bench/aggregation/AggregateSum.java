@@ -41,35 +41,18 @@ import java.time.Instant;
 
 
 public class AggregateSum {
-
-    public static class TickAwareMongoBolt extends MongoInsertBolt {
-        public TickAwareMongoBolt(String url, String collectionName, MongoMapper mapper) {
-            super(url, collectionName, mapper);
-        }
-        @Override
-        public void execute(Tuple tuple) {
-            System.out.println("FIELDS: " + tuple.getFields().toString());
-
-            if(tuple.contains("value")) {
-                System.out.println(tuple.getValueByField("value"));
-            }
-
-            if(!TupleUtils.isTick(tuple)) super.execute(tuple);
-            else {System.out.println("LEL wat moet je met al die ticks");}
-        }
-    }
-
-
     static List<String> fields = Arrays.asList("gem", "price", "event_time");
 
     public static void main(String[] args) {
         // Get arguments
+        if(args.length < 4) { System.out.println("Must supply input_ip, input_port, mongo_ip, and num_workers"); }
         String input_IP = args[0];
         String input_PORT = args[1];
         String mongo_IP = args[2];
-        String NTP_IP = args[3];
-        Integer num_workers = Integer.parseInt(args[4]);
-        
+        Integer num_workers = Integer.parseInt(args[3]);
+        String NTP_IP = "";
+        if(args.length >= 4) { NTP_IP = args[4]; }
+
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency");
@@ -78,13 +61,10 @@ public class AggregateSum {
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(new SocketSpout(new JsonScheme(fields), input_IP, Integer.parseInt(input_PORT)))
-            //.window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
             .window(SlidingWindows.of(Count.of(8), Count.of(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
 	        .aggregateByKey(new Sum())
-            //.peek(s -> System.out.println("GemID: " + Integer.toString(s.getFirst()) + ", "+ s.getSecond().print() ))
             .map(new toOutputTuple(NTP_IP))
-            .peek(s -> System.out.println(s.getFields().toString()))
             .to(mongoBolt);
 
         // Build config and submit
@@ -104,38 +84,51 @@ public class AggregateSum {
     // Mongo entry: {GemID, aggregate, latency}
     private static class toOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
         String NTP_IP = "";
+        TimeGetter timeGetter;
+        
+        private static interface TimeGetter {
+            public Double get();
+        }
 
         public toOutputTuple(String _NTP_IP) {
             NTP_IP = _NTP_IP;
+            if(NTP_IP == "") { timeGetter = new systemTime(); }
+            else { timeGetter = new NTPTime(); }
         }
 
         // Gets time from NTP server
-        private Double currentNTPTime() {
-            final NTPUDPClient client = new NTPUDPClient();
-            try { client.open(); }
-            catch (final SocketException e) { System.out.println("Could not establish NTP connection"); }
+        private class NTPTime implements TimeGetter {
+            @Override
+            public Double get() {
+                final NTPUDPClient client = new NTPUDPClient();
+                try { client.open(); }
+                catch (final SocketException e) { System.out.println("Could not establish NTP connection"); }
 
-            Double time = 0.0;
-            try { 
-                TimeStamp recv_time = client
-                    .getTime(InetAddress.getByName(NTP_IP))
-                    .getMessage()
-                    .getReceiveTimeStamp();
+                Double time = 0.0;
+                try { 
+                    TimeStamp recv_time = client
+                        .getTime(InetAddress.getByName(NTP_IP))
+                        .getMessage()
+                        .getReceiveTimeStamp();
                 
-                Double integer_part = Long.valueOf(recv_time.getSeconds()).doubleValue();
-                Double fraction = Long.valueOf(recv_time.getFraction()).doubleValue() / 0xFFFFFFFF;
+                    Double integer_part = Long.valueOf(recv_time.getSeconds()).doubleValue();
+                    Double fraction = Long.valueOf(recv_time.getFraction()).doubleValue() / 0xFFFFFFFF;
                 
-                return integer_part + fraction;
-            } 
-            catch (IOException ioe) { System.out.println("Could not get time from NTP server"); }
-            // NTP request has failed 
-            return 0.0;
+                    return integer_part + fraction;
+                } 
+                catch (IOException ioe) { System.out.println("Could not get time from NTP server"); }
+                // NTP request has failed 
+                return 0.0;
+            }
         }
 
         // Gets time from system clock
-        private Double currentTime() {
-            Instant time = Instant.now();
-            return Double.valueOf(time.getEpochSecond()) + Double.valueOf(time.getNano()) / (1000.0*1000*1000);
+        private class systemTime implements TimeGetter {
+            @Override
+            public Double get() {
+                Instant time = Instant.now();
+                return Double.valueOf(time.getEpochSecond()) + Double.valueOf(time.getNano()) / (1000.0*1000*1000);
+            }
         }
 
         @Override
@@ -147,7 +140,7 @@ public class AggregateSum {
             int gemID = input.getFirst();
             String aggregate = Integer.toString(input.getSecond().price);
             Double lowest_event_time = input.getSecond().event_time;
-            String latency = Double.toString(currentTime() - lowest_event_time);
+            String latency = Double.toString(timeGetter.get() - lowest_event_time);
             
             SimpleTuple tuple = new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
             System.out.println("MADE NEW OUTPUT TUPLE");            
@@ -175,7 +168,25 @@ public class AggregateSum {
     }
 
 
-	private static class Sum implements CombinerAggregator<Values, Values, Values> {
+    public static class TickAwareMongoBolt extends MongoInsertBolt {
+        public TickAwareMongoBolt(String url, String collectionName, MongoMapper mapper) {
+            super(url, collectionName, mapper);
+        }
+        @Override
+        public void execute(Tuple tuple) {
+            System.out.println("FIELDS: " + tuple.getFields().toString());
+
+            if(tuple.contains("value")) {
+                System.out.println(tuple.getValueByField("value"));
+            }
+
+            if(!TupleUtils.isTick(tuple)) super.execute(tuple);
+            else {System.out.println("LEL wat moet je met al die ticks");}
+        }
+    }
+	
+    
+    private static class Sum implements CombinerAggregator<Values, Values, Values> {
 	    @Override // The initial value of the sum
 	    public Values init() { return new Values(0, Double.POSITIVE_INFINITY); }
 
