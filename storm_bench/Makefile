@@ -20,7 +20,6 @@ build: $(SRC_FILES)
 	javac -cp $(COMPILE_LIBS) $(SRC_FILES)
 	jar cvf $(JAR_NAME) $(SRC_DIR)
 
-# class, input_address, input_port, mongo_address, NTP_address, num_workers
 submit: build
 	storm jar \
 	-c storm.zookeeper.servers="[\"$(ZK_ADDRESS)\"]" \
