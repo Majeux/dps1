@@ -21,11 +21,11 @@ class BenchmarkDriver:
     PRINT_CONFIRM_TUPLE = True #print tuples when they are being send
 
     SOCKET_TIMEOUT = 6000
-    HOST = "localhost"
+    HOST = "0.0.0.0"
     PORT = 5555
 
-    QUEUE_MAX = 2000    # TODO configure
-    GET_TIMEOUT = 0.01
+    QUEUE_MAX = 2000000    # TODO configure
+    GET_TIMEOUT = 10
 
     QUEUE_LOG_INTERVAL = 10 # TODO configure
 
@@ -75,7 +75,7 @@ class BenchmarkDriver:
                 print(i*10, ": ", r)
     # end -- def run
 
-    def consume_loop(self, consume_f, args):
+    def consume_loop(self, consume_f, *args):
         for g in self.generators:
             g.start()
 
@@ -104,7 +104,7 @@ class BenchmarkDriver:
             c.sendall(data.encode())
 
             if self.PRINT_CONFIRM_TUPLE:
-                print('Sent tuple #', i)
+                print('Sent tuple #')
 
         if self.PRINT_CONN_STATUS:
             print("Start Streamer")
@@ -112,7 +112,7 @@ class BenchmarkDriver:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(self.SOCKET_TIMEOUT) # TODO determine/tweak
             s.bind((self.HOST, self.PORT))
-            s.listen()
+            s.listen(0)
 
             if self.PRINT_CONN_STATUS:
                 print("waiting for connection")

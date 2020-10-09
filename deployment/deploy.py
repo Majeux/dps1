@@ -37,7 +37,7 @@ def deploy_generator(node, gen_rate, reservation_id):
 
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
+	" 'screen -L -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
@@ -62,7 +62,7 @@ def submit_topology(nimbus_node, generator_node, mongo_node, num_workers):
         " NUM_WORKERS=" + str(num_workers)
 
     print("Submitting topology to the cluster")
-    System.os(submit_command)
+    os.system(submit_command)
 
 def deploy_all(available_nodes, gen_rate, reservation_id):
     # Assign nodes

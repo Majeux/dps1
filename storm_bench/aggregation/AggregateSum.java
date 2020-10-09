@@ -31,7 +31,7 @@ public class AggregateSum {
         String mongo_IP = args[2];
         Integer num_workers = Integer.parseInt(args[3]);
         String NTP_IP = "";
-        if(args.length >= 4) { NTP_IP = args[4]; }
+        if(args.length > 4) { NTP_IP = args[4]; }
 
         // Socket spout to get input tuples
         JsonScheme inputScheme = new JsonScheme(Arrays.asList("gem", "price", "event_time"));

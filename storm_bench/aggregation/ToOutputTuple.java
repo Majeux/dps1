@@ -15,6 +15,7 @@ import org.apache.storm.tuple.Fields;
 import org.apache.commons.net.ntp.TimeStamp;
 import java.net.InetAddress;
 import java.time.Instant;
+import java.io.Serializable;
 
 
 // Map aggregation tuples to a nice output format:
@@ -30,7 +31,7 @@ public class ToOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple
     }
 
     // Gets time from NTP server
-    private class NTPTime implements TimeGetter {
+    private class NTPTime implements TimeGetter, Serializable {
         @Override
         public Double get() {
             final NTPUDPClient client = new NTPUDPClient();
@@ -56,7 +57,7 @@ public class ToOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple
     }
 
     // Gets time from system clock
-    private class systemTime implements TimeGetter {
+    private class systemTime implements TimeGetter, Serializable {
         @Override
         public Double get() {
             Instant time = Instant.now();

@@ -54,7 +54,7 @@ cur_waiting_time=0
 while reservation_status != "R":
     reservation_status = get_reservation_info()[STATUS_IDX]
 
-    print(reservation_status)
+    print("Reservation status: {}".format(reservation_status))
     time.sleep(POLLING_INTERVAL)
     cur_waiting_time += POLLING_INTERVAL
 
