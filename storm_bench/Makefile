@@ -28,7 +28,10 @@ submit: build
 	$(INPUT_ADRESS) $(INPUT_PORT) $(MONGO_ADRESS) $(NUM_WORKERS) $(NTP_ADDRESS) 
 
 kill:
-	storm kill "agsum"
+	storm kill \
+	-c storm.zookeeper.servers="[\"$(ZK_ADDRESS)\"]" \
+        -c nimbus.seeds="[\"$(NIMBUS_ADDRESS)\"]" \
+	"agsum"
 
 clean:
 	rm -f $(JARNAME)

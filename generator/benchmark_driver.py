@@ -104,7 +104,7 @@ class BenchmarkDriver:
             c.sendall(data.encode())
 
             if self.PRINT_CONFIRM_TUPLE:
-                print('Sent tuple #', idea)
+                print('Sent tuple #', i)
 
         if self.PRINT_CONN_STATUS:
             print("Start Streamer")
