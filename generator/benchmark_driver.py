@@ -88,23 +88,23 @@ class BenchmarkDriver:
             if i % self.QUEUE_LOG_INTERVAL == 0:
                 self.q_size_log.append(self.q.qsize())
 
-            consume_f(data, *args)
+            consume_f(data, i, *args)
     # end -- def consume_loop
 
     def stream_test(self):
-        def print_to_terminal(data):
+        def print_to_terminal(data, i):
             if self.PRINT_CONFIRM_TUPLE:
-                print("TEST: got", data)
+                print("TEST{}: got".format(i), data)
 
         self.consume_loop(print_to_terminal, ())
     # end -- def stream_test
 
     def stream_from_queue(self):
-        def send(data, c):
+        def send(data, i, c):
             c.sendall(data.encode())
 
             if self.PRINT_CONFIRM_TUPLE:
-                print('Sent tuple #')
+                print('Sent tuple #', idea)
 
         if self.PRINT_CONN_STATUS:
             print("Start Streamer")
