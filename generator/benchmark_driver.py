@@ -146,20 +146,22 @@ class BenchmarkDriver:
         return purchase
     # end -- def get_purchase_data
 
-if __name__ == "__main__":
+def arg_to_int(arg, name):
     try:
-        budget       = int(argv[1]) if len(argv) > 1 else 1000000
-        rate         = int(argv[2]) if len(argv) > 2 else 2000
-        n_generators = int(argv[3]) if len(argv) > 3 else 4
-        ntp_address  = argv[4]      if len(argv) > 4 else None
-    except ValueError:
-        print("INVALID ARGUMENT TYPE!")
-        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint] [ntp_address: string]`")
-        quit()
-    except:
-        print("ERROR PARSING ARGUMENTS!")
-        print("Try `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint] [ntp_address: string]`")
-        quit()
+        return int(arg)
+    except ValueError as e:
+        raise RuntimeError('\n\t commandline argument of invalid type.\n\t`{}` must be of type `int`\n\tUse: `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint]`'.format(name)) from e
+    except Exception:
+        raise
+
+if __name__ == "__main__":
+    if len(argv) < 4:
+        raise ValueError('\n\tToo few arguments.\n\tUse: `benchmark_driver.py [budget: uint] [generation_rate: uint] [n_generators: uint]`')
+
+    budget       = arg_to_int(argv[1], "budget")
+    rate         = arg_to_int(argv[2], "generation_rate")
+    n_generators = arg_to_int(argv[3], "n_generators")
+    ntp_address  = argv[4] if len(argv) > 4 else None
 
     driver = BenchmarkDriver(budget, rate, n_generators, ntp_address)
     driver.run()
