@@ -2,6 +2,7 @@ package aggregation;
 import aggregation.ToOutputTuple;
 import aggregation.SumAggregator;
 import aggregation.TickAwareMongoBolt;
+import aggregation.StupidSpout;
 
 // STORM
 import org.apache.storm.streams.StreamBuilder;
@@ -14,6 +15,7 @@ import org.apache.storm.topology.base.BaseWindowedBolt.Count;
 import org.apache.storm.topology.base.BaseWindowedBolt.Duration;
 import org.apache.storm.streams.Pair;
 import org.apache.storm.generated.*;
+import org.apache.storm.spout.Scheme; // REMOVE along WITH STUPIDSPOUT
 import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
 import org.apache.storm.mongodb.bolt.MongoInsertBolt;
 
@@ -23,7 +25,6 @@ import java.util.Arrays;
 
 // Main class to submit to the storm cluser. Contains a stream API construction of a topology
 public class AggregateSum {
-
     public static void main(String[] args) {
         // Get arguments
         if(args.length < 4) { System.out.println("Must supply input_ip, input_port, mongo_ip, and num_workers"); }
@@ -36,7 +37,8 @@ public class AggregateSum {
 
         // Socket spout to get input tuples
         JsonScheme inputScheme = new JsonScheme(Arrays.asList("gem", "price", "event_time"));
-        SocketSpout sSpout = new SocketSpout(inputScheme, input_IP, Integer.parseInt(input_port));
+        //SocketSpout sSpout = new SocketSpout(inputScheme, input_IP, Integer.parseInt(input_port));
+        StupidSpout sSpout = new StupidSpout(inputScheme, input_IP, Integer.parseInt(input_port));
 
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
@@ -47,14 +49,15 @@ public class AggregateSum {
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout)
+            .peek(x -> System.out.println("TESTER"))
             .window(SlidingWindows.of(Count.of(8), Count.of(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
-	        .aggregateByKey(new SumAggregator())
+            .aggregateByKey(new SumAggregator())
             .map(new ToOutputTuple(NTP_IP))
             .to(mongoBolt);
 
         // Build config and submit
-	    Config config = new Config();
+        Config config = new Config();
         config.setMaxSpoutPending(15);
         config.setNumWorkers(num_workers);
         //config.setDebug(true);

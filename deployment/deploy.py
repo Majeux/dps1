@@ -15,19 +15,21 @@ def deploy_zk_nimbus(node):
     #Start the nimbus
     nimbus_start_command = \
         " 'screen -d -m storm nimbus" + \
-        " -c storm.zookeeper.servers=\"[\\\"" + "0.0.0.0" + "\\\"]\"" + \
-        " -c nimbus.seeds=\"[\\\"" + "0.0.0.0" + "\\\"]\" &'"
+        " -c storm.zookeeper.servers=\"[\\\"" + node + "\\\"]\"" + \
+        " -c nimbus.seeds=\"[\\\"" + node + "\\\"]\"" + \
+	" -c storm.local.hostname=" + node + " &'"
 
     print("Deploying nimbus on " + node)
     os.system("ssh " + node + nimbus_start_command)
 
 def deploy_workers(nodes, zk_nimbus_node):
-    worker_start_command = \
-        " 'screen -d -m storm supervisor" + \
-        " -c storm.zookeeper.servers=\"[\\\"" + zk_nimbus_node + "\\\"]\"" + \
-        " -c nimbus.seeds=\"[\\\"" + zk_nimbus_node + "\\\"]\" &'"
-
     for i in nodes:
+        worker_start_command = \
+            " 'screen -d -m storm supervisor" + \
+            " -c storm.zookeeper.servers=\"[\\\"" + zk_nimbus_node + "\\\"]\"" + \
+            " -c nimbus.seeds=\"[\\\"" + zk_nimbus_node + "\\\"]\"" + \
+            " -c storm.local.hostname=" + i + " &'"
+        
         print("Deploying worker " + i)
         os.system("ssh " + i + worker_start_command)
 
@@ -97,5 +99,9 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
             print("Spouts disabled. Waiting 30 seconds to process leftover tuples")
             time.sleep(35)
             os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
+            
+            if input("Clean logs?") == "y":
+                os.system("rm -r /var/scratch/ddps2016/stormlogs/*")
+                os.system("rm /home/ddps2016/zookeeper/logs/*")
             break
 		
