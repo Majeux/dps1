@@ -43,9 +43,12 @@ def deploy_generator(node, gen_rate, reservation_id):
     os.system("ssh " + node + generator_start_command)
 
 def deploy_mongo(node):
+    print("Copying mongo files to node")
+    os.system("ssh " + node + " 'cp -r /var/scratch/ddps2016/mongo_data /local/ddps2016'")
+
     mongo_start_command = \
 	" 'screen -d -m numactl --interleave=all" + \
-	" mongod --config ~/mongo/mongodb.conf &'"
+	" mongod --config /home/ddps2016/mongo/mongodb.conf &'"
 
     print("Deploying mongo server on " + node)
     os.system("ssh " + node + mongo_start_command);
