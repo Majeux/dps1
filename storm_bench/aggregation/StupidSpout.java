@@ -89,8 +89,8 @@ public class StupidSpout implements IRichSpout {
     public void activate() {
         System.out.println("ACTIVATE");
         running = true;
-	readerThread = new Thread(new StupidSpout.SocketReaderRunnable());
-        readerThread.start();
+	readerThread = new Thread(new StupidSpout.SocketReaderRunnable()); //TODO: reuse thread
+        readerThread.start(); 
     }
 
     @Override
@@ -102,14 +102,12 @@ public class StupidSpout implements IRichSpout {
     @Override
     public void nextTuple() {
         if (queue.peek() != null) {
-            System.out.println("PEEKED SOMETHING");
             List<Object> values = queue.poll();
             if (values != null) {
-		System.out.println("VALUES!=NULL");
                 String id = UUID.randomUUID().toString();
                 emitted.put(id, values);
                 collector.emit(values, id);
-            } else { System.out.println("VALUES=NULL"); }
+            } 
         } 
     }
 
@@ -148,14 +146,10 @@ public class StupidSpout implements IRichSpout {
             System.out.println("START RUN");
             while (running) {
                 try {
-                    System.out.println("PRE-READLINE");
                     String line = in.readLine();
-                    System.out.println("POST-READLINE");
                     if (line == null) {
                         throw new RuntimeException("EOF reached from the socket. We can't read the data any more.");
                     }
-                    System.out.println("NEW READLINE:");
-                    System.out.println(line);
 
                     List<Object> values = convertLineToTuple(line.trim());
                     queue.push(values);

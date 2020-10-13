@@ -41,7 +41,7 @@ public class AggregateSum {
         StupidSpout sSpout = new StupidSpout(inputScheme, input_IP, Integer.parseInt(input_port));
 
         // Mongo bolt to store the results
-        String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/&authSource=results";
+        String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/results?authSource=admin";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency");
         //TickAwareMongoBolt mongoBolt = new TickAwareMongoBolt(mongo_addr, "aggregation", mongoMapper);
 	MongoInsertBolt mongoBolt = new MongoInsertBolt(mongo_addr, "aggregation", mongoMapper);
@@ -49,7 +49,6 @@ public class AggregateSum {
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout)
-            .peek(x -> System.out.println("TESTER"))
             .window(SlidingWindows.of(Count.of(8), Count.of(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
             .aggregateByKey(new SumAggregator())

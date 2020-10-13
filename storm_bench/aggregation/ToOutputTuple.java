@@ -73,8 +73,6 @@ public class ToOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple
 
     @Override
     public SimpleTuple apply(Pair<Integer, Values> input) {
-        System.out.println("apply?");
-
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
 
         int gemID = input.getFirst();
@@ -83,7 +81,6 @@ public class ToOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple
         String latency = Double.toString(timeGetter.get() - lowest_event_time);
 
         SimpleTuple tuple = new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
-        System.out.println("MADE NEW OUTPUT TUPLE");
-         return tuple;
+        return tuple;
     }
 }
