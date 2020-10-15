@@ -23,6 +23,7 @@ def deploy_zk_nimbus(node):
     os.system("ssh " + node + nimbus_start_command)
 
 def deploy_workers(nodes, zk_nimbus_node):
+    time.sleep(3)
     for i in nodes:
         worker_start_command = \
             " 'screen -d -m storm supervisor" + \
@@ -107,5 +108,6 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
             if input("Clean logs?") == "y":
                 os.system("rm -r /var/scratch/ddps2016/stormlogs/*")
                 os.system("rm /home/ddps2016/zookeeper/logs/*")
+                os.system("rm /home/ddps2016/mongo/log/*")
             break
 		

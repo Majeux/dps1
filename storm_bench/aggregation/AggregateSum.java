@@ -46,7 +46,7 @@ public class AggregateSum {
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout)
-            .window(SlidingWindows.of(Count.of(8), Count.of(4)))
+            .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             .aggregateByKey(new SumAggregator())
             .map(new ToOutputTuple(NTP_IP))
@@ -54,13 +54,11 @@ public class AggregateSum {
 
         // Build config and submit
         Config config = new Config();
-        config.setMaxSpoutPending(15);
         config.setNumWorkers(num_workers);
-        //config.setDebug(true);
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
-	   	catch(AlreadyAliveException e) { System.out.println("Already alive"); }
-	   	catch(InvalidTopologyException e) { System.out.println("Invalid topolgy"); }
-	   	catch(AuthorizationException e) { System.out.println("Auth problem"); }
- 	}
+        catch(AlreadyAliveException e) { System.out.println("Already alive"); }
+        catch(InvalidTopologyException e) { System.out.println("Invalid topolgy"); }
+        catch(AuthorizationException e) { System.out.println("Auth problem"); }
+    }
 }

@@ -52,6 +52,7 @@ reserved_nodes = reservation[NODES_IDX:]
 reservation_status=get_reservation_info()[STATUS_IDX]
 cur_waiting_time=0
 while reservation_status != "R":
+    time.sleep(1)
     reservation_status = get_reservation_info()[STATUS_IDX]
 
     print("Reservation status: {}".format(reservation_status))

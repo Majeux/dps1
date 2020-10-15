@@ -8,13 +8,13 @@ import org.apache.storm.streams.operations.CombinerAggregator;
 public class SumAggregator implements CombinerAggregator<AggregationResult, AggregationResult, AggregationResult> {
     
     @Override // The initial value of the sum
-    public AggregationResult init() { return new AggregationResult(0, Double.POSITIVE_INFINITY); }
+    public AggregationResult init() { return new AggregationResult(0, Double.NEGATIVE_INFINITY); }
 
     @Override // Updates the sum by adding the value (this could be a partial sum)
     public AggregationResult apply(AggregationResult aggregate, AggregationResult value) {
         return new AggregationResult(
             aggregate.price + value.price,
-            Math.min(aggregate.event_time, value.event_time)
+            Math.max(aggregate.event_time, value.event_time)
         );
     }
 
@@ -22,7 +22,7 @@ public class SumAggregator implements CombinerAggregator<AggregationResult, Aggr
     public AggregationResult merge(AggregationResult accum1, AggregationResult accum2) {
         return new AggregationResult(
             accum1.price + accum2.price,
-            Math.min(accum1.event_time, accum2.event_time)
+            Math.max(accum1.event_time, accum2.event_time)
         );
     }
 
