@@ -25,9 +25,8 @@ public class ToOutputTuple implements Function<Pair<Integer,AggregationResult>, 
         int gemID = input.getFirst();
         String aggregate = Integer.toString(input.getSecond().price);
         Double highest_event_time = input.getSecond().event_time;
-        String latency = Double.toString(highest_event_time);
 
-        SimpleTuple tuple = new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, latency));
+        SimpleTuple tuple = new SimpleTuple(outputFields, Arrays.asList(gemID, aggregate, highest_event_time));
         return tuple;
     }
 }

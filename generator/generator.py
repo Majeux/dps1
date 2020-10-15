@@ -8,8 +8,8 @@ from our_ntp import getLocalTime
 from benchmark_driver import STOP_TOKEN
 
 USER_RANGE  = 1000 #idk
-GEM_RANGE   = 5
-PRICE_RANGE = 10
+GEM_RANGE   = 8
+PRICE_RANGE = 5
 
 PUT_TIMEOUT = 0
 

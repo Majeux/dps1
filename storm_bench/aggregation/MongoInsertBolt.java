@@ -12,6 +12,7 @@ import java.time.Instant;
 import org.apache.commons.net.ntp.NTPUDPClient;
 import java.net.SocketException;
 import java.io.IOException;
+import java.io.Serializable;
 
 import org.apache.commons.lang.Validate;
 import org.apache.storm.mongodb.common.mapper.MongoMapper;
@@ -25,17 +26,15 @@ import org.bson.Document;
 import org.apache.storm.mongodb.bolt.AbstractMongoBolt;
 import org.apache.storm.cassandra.trident.state.SimpleTuple;
 import org.apache.storm.tuple.Fields;
-
+import org.apache.storm.utils.TupleUtils;
 
 public class MongoInsertBolt extends AbstractMongoBolt {
 
     private static final int DEFAULT_FLUSH_INTERVAL_SECS = 1;
     private MongoMapper mapper;
     private boolean ordered = true;  //default is ordered.
-    private int batchSize;
     private TimeGetter timeGetter = new SystemTime();
-    private BatchHelper batchHelper;
-    private int flushIntervalSecs = DEFAULT_FLUSH_INTERVAL_SECS;
+    
     public MongoInsertBolt(String url, String collectionName, MongoMapper mapper) {
         super(url, collectionName);
         Validate.notNull(mapper, "MongoMapper can not be null");
@@ -44,68 +43,34 @@ public class MongoInsertBolt extends AbstractMongoBolt {
 
     @Override
     public void execute(Tuple tuple) {
-        try {
-            if (batchHelper.shouldHandle(tuple)) {
-                batchHelper.addBatch(tuple);
-            }
+        if(TupleUtils.isTick(tuple)) { return; }
+        SimpleTuple tup = (SimpleTuple)tuple.getValue(0);
 
-            if (batchHelper.shouldFlush()) {
-                flushTuples();
-                batchHelper.ack();
-            }
-        } catch (Exception e) {
-            batchHelper.fail(e);
-        }
+        // Calculate latency at the moment before output
+        Double max_event_time = tup.getDoubleByField("max_event_time");
+        Double cur_time = timeGetter.get();
+        Double latency = cur_time - max_event_time;
+
+        // Build up the final result tuple
+        Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency", "time"));
+        List<Object> outputValues = new ArrayList(tup.getValues());
+        outputValues.set(2, latency);
+        outputValues.add(cur_time);
+
+        SimpleTuple outputTuple = new SimpleTuple(outputFields, outputValues);
+        mongoClient.insert(Arrays.asList(mapper.toDocument(outputTuple)), ordered);
     }
-
-    private void flushTuples() {
-        List<Document> docs = new LinkedList<>();
-        for (Tuple t : batchHelper.getBatchTuples()) {
-            SimpleTuple tup = (SimpleTuple)t.getValue(0);
-
-            // Calculate latency at the moment before output
-            Double max_event_time = tup.getDoubleByField("max_event_time");
-            Double cur_time = timeGetter.get();
-            Double latency = cur_time - max_event_time;
-
-            // Build up the final result tuple
-            Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency", "time"));
-            List<Object> outputValues = new ArrayList(tup.getValues());
-            outputValues.set(2, latency);
-            outputValues.add(cur_time);
-
-            SimpleTuple outputTuple = new SimpleTuple(outputFields, outputValues);
-            Document doc = mapper.toDocument(outputTuple);
-            docs.add(doc);
-        }
-        mongoClient.insert(docs, ordered);
-    }
-
-    public MongoInsertBolt withBatchSize(int batchSize) {
-        this.batchSize = batchSize;
-        return this;
-    }
+ 
 
     public MongoInsertBolt withOrdered(boolean ordered) {
         this.ordered = ordered;
         return this;
     }
 
-    public MongoInsertBolt withFlushIntervalSecs(int flushIntervalSecs) {
-        this.flushIntervalSecs = flushIntervalSecs;
-        return this;
-    }
-
-    @Override
-    public Map<String, Object> getComponentConfiguration() {
-        return TupleUtils.putTickFrequencyIntoComponentConfig(super.getComponentConfiguration(), flushIntervalSecs);
-    }
-
     @Override
     public void prepare(Map<String, Object> topoConf, TopologyContext context,
             OutputCollector collector) {
         super.prepare(topoConf, context, collector);
-        this.batchHelper = new BatchHelper(batchSize, collector);
     }
 
     @Override
@@ -116,7 +81,7 @@ public class MongoInsertBolt extends AbstractMongoBolt {
     }
 
     // Gets time from NTP server
-    private class NTPTime implements TimeGetter {
+    private class NTPTime implements TimeGetter, Serializable {
 	String NTP_IP;
 
         public NTPTime(String _NTP_IP) {
@@ -148,7 +113,7 @@ public class MongoInsertBolt extends AbstractMongoBolt {
     }
 
     // Gets time from system clock
-    private class SystemTime implements TimeGetter {
+    private class SystemTime implements TimeGetter, Serializable {
         @Override
         public Double get() {
             Instant time = Instant.now();

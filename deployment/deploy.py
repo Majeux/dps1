@@ -84,7 +84,7 @@ def kill_cluster(zk_nimbus_node, mongo_node):
     # Export mongo data
     os.system(
         "mongoexport --host " + mongo_node + " -u storm -p test -d results -c aggregation " + \
-        "-f \"latency\" --type=csv -o ~/result.csv"
+        "-f \"GemID,latency,time\" --type=csv -o ~/result.csv"
     )
 
     # Cancel reservation

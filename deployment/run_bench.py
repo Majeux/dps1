@@ -46,13 +46,11 @@ except Exception as e:
     exit()
 
 reservation_id = reservation[ID_IDX]
-reserved_nodes = reservation[NODES_IDX:]
 
 # Continuously check whether the nodes are available
 reservation_status=get_reservation_info()[STATUS_IDX]
 cur_waiting_time=0
 while reservation_status != "R":
-    time.sleep(1)
     reservation_status = get_reservation_info()[STATUS_IDX]
 
     print("Reservation status: {}".format(reservation_status))
@@ -62,8 +60,10 @@ while reservation_status != "R":
     # If it's taking too long, cancel the reservation
     if cur_waiting_time > MAX_WAIT_TIME:
         cancel_reservation(reservation_id)
+        exit()
 
 # If we've gotten here, the reservation is ready
+reserved_nodes = reservation[NODES_IDX:]
 print("Got reservation on nodes: ", reserved_nodes)
 print("Deploying cluster.")
 
