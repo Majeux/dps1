@@ -46,6 +46,7 @@ public class AggregateSum {
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout)
+            .repartition(num_workers)
             .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             .aggregateByKey(new SumAggregator())

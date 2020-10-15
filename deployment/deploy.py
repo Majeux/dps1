@@ -1,7 +1,7 @@
 import os
 import time
 
-BUDGET = 50000
+BUDGET = 100000
 NUM_GENERATORS = 16
 
 def deploy_zk_nimbus(node):
@@ -23,8 +23,8 @@ def deploy_zk_nimbus(node):
     os.system("ssh " + node + nimbus_start_command)
 
 def deploy_workers(nodes, zk_nimbus_node):
-    time.sleep(3)
     for i in nodes:
+        time.sleep(3)
         worker_start_command = \
             " 'screen -d -m storm supervisor" + \
             " -c storm.zookeeper.servers=\"[\\\"" + zk_nimbus_node + "\\\"]\"" + \
