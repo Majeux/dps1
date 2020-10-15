@@ -37,7 +37,7 @@ def deploy_workers(nodes, zk_nimbus_node):
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -L -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
+	" 'screen -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
@@ -71,6 +71,32 @@ def submit_topology(nimbus_node, generator_node, mongo_node, num_workers):
     print("Submitting topology to the cluster")
     os.system(submit_command)
 
+def kill_cluster(zk_nimbus_node, mongo_node):
+    kill_command = \
+    	"cd /home/ddps2016/DPS1/storm_bench; make kill" + \
+    	" ZK_ADDRESS=" + zk_nimbus_node + \
+    	" NIMBUS_ADDRESS=" + zk_nimbus_node
+    print("Killing topology")
+    os.system(kill_command)
+    print("Spouts disabled. Waiting 30 seconds to process leftover tuples")
+    time.sleep(35)
+
+    # Export mongo data
+    os.system(
+        "mongoexport --host " + mongo_node + " -u storm -p test -d results -c aggregation " + \
+        "-f \"latency\" --type=csv -o ~/result.csv"
+    )
+
+    # Cancel reservation
+    os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
+    
+    # Prompt to clean logs
+    if input("Clean logs?") == "y":
+        os.system("rm -r /var/scratch/ddps2016/stormlogs/*")
+        os.system("rm /home/ddps2016/zookeeper/logs/*")
+        os.system("rm /home/ddps2016/mongo/log/*")
+
+
 def deploy_all(available_nodes, gen_rate, reservation_id):
     assert len(available_nodes) > 3
     # Assign nodes
@@ -95,19 +121,6 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
 
     while True:
         if input("Type \"k\" to kill the cluster\n") == "k":
-            kill_command = \
-	    	"cd /home/ddps2016/DPS1/storm_bench; make kill" + \
-            	" ZK_ADDRESS=" + zk_nimbus_node + \
-            	" NIMBUS_ADDRESS=" + zk_nimbus_node
-            print("Killing topology")
-            os.system(kill_command)
-            print("Spouts disabled. Waiting 30 seconds to process leftover tuples")
-            time.sleep(35)
-            os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
-            
-            if input("Clean logs?") == "y":
-                os.system("rm -r /var/scratch/ddps2016/stormlogs/*")
-                os.system("rm /home/ddps2016/zookeeper/logs/*")
-                os.system("rm /home/ddps2016/mongo/log/*")
+            kill_cluster(zk_nimbus_node, mongo_node)
             break
 		
