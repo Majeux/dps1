@@ -1,5 +1,5 @@
 package aggregation;
-import aggregation.Values;
+import aggregation.AggregationResult;
 
 // Storm
 import org.apache.storm.cassandra.trident.state.SimpleTuple;
@@ -19,10 +19,10 @@ import java.io.Serializable;
 
 
 // Map aggregation tuples to a nice output format:
-// Aggregate result: {gemID, Values = {price, event_time}}
+// Aggregate result: {gemID, AggregationResult = {price, event_time}}
 // =>
 // Mongo entry: {GemID, aggregate, latency}
-public class ToOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple> {
+public class ToOutputTuple implements Function<Pair<Integer,AggregationResult>, SimpleTuple> {
     private String NTP_IP = "";
     private TimeGetter timeGetter;
 
@@ -72,7 +72,7 @@ public class ToOutputTuple implements Function<Pair<Integer,Values>, SimpleTuple
     }
 
     @Override
-    public SimpleTuple apply(Pair<Integer, Values> input) {
+    public SimpleTuple apply(Pair<Integer, AggregationResult> input) {
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency"));
 
         int gemID = input.getFirst();

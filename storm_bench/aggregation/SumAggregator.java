@@ -1,31 +1,31 @@
 package aggregation;
-import aggregation.Values;
+import aggregation.AggregationResult;
 
 // Storm
 import org.apache.storm.streams.operations.CombinerAggregator;
 
 // Aggregates sum, while finding the minimum event time.
-public class SumAggregator implements CombinerAggregator<Values, Values, Values> {
+public class SumAggregator implements CombinerAggregator<AggregationResult, AggregationResult, AggregationResult> {
     
     @Override // The initial value of the sum
-    public Values init() { return new Values(0, Double.POSITIVE_INFINITY); }
+    public AggregationResult init() { return new AggregationResult(0, Double.POSITIVE_INFINITY); }
 
     @Override // Updates the sum by adding the value (this could be a partial sum)
-    public Values apply(Values aggregate, Values value) {
-        return new Values(
+    public AggregationResult apply(AggregationResult aggregate, AggregationResult value) {
+        return new AggregationResult(
             aggregate.price + value.price,
             Math.min(aggregate.event_time, value.event_time)
         );
     }
 
     @Override // merges the partial sums
-    public Values merge(Values accum1, Values accum2) {
-        return new Values(
+    public AggregationResult merge(AggregationResult accum1, AggregationResult accum2) {
+        return new AggregationResult(
             accum1.price + accum2.price,
             Math.min(accum1.event_time, accum2.event_time)
         );
     }
 
     @Override // extract result from the accumulator
-    public Values result(Values accum) { return accum; }
+    public AggregationResult result(AggregationResult accum) { return accum; }
 }

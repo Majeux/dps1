@@ -29,8 +29,8 @@ import org.slf4j.LoggerFactory;
  * Spout for Socket data. Only available for Storm SQL.
  * The class doesn't handle reconnection, so you may not want to use this for production.
  */
-public class StupidSpout implements IRichSpout {
-    private static final Logger LOG = LoggerFactory.getLogger(StupidSpout.class);
+public class FixedSocketSpout implements IRichSpout {
+    private static final Logger LOG = LoggerFactory.getLogger(FixedSocketSpout.class);
 
     private final String host;
     private final int port;
@@ -53,7 +53,7 @@ public class StupidSpout implements IRichSpout {
      * @param host socket host
      * @param port socket port
      */
-    public StupidSpout(Scheme scheme, String host, int port) {
+    public FixedSocketSpout(Scheme scheme, String host, int port) {
         this.scheme = scheme;
         this.host = host;
         this.port = port;
@@ -89,7 +89,7 @@ public class StupidSpout implements IRichSpout {
     public void activate() {
         System.out.println("ACTIVATE");
         running = true;
-	readerThread = new Thread(new StupidSpout.SocketReaderRunnable()); //TODO: reuse thread
+	readerThread = new Thread(new SocketReaderRunnable()); //TODO: reuse thread
         readerThread.start(); 
     }
 

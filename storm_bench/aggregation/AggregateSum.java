@@ -2,11 +2,10 @@ package aggregation;
 import aggregation.ToOutputTuple;
 import aggregation.SumAggregator;
 import aggregation.MongoInsertBolt;
-import aggregation.StupidSpout;
+import aggregation.FixedSocketSpout;
 
 // STORM
 import org.apache.storm.streams.StreamBuilder;
-import org.apache.storm.sql.runtime.datasource.socket.spout.SocketSpout;
 import org.apache.storm.sql.runtime.serde.json.JsonScheme;
 import org.apache.storm.Config;
 import org.apache.storm.StormSubmitter;
@@ -37,8 +36,7 @@ public class AggregateSum {
 
         // Socket spout to get input tuples
         JsonScheme inputScheme = new JsonScheme(Arrays.asList("gem", "price", "event_time"));
-        //SocketSpout sSpout = new SocketSpout(inputScheme, input_IP, Integer.parseInt(input_port));
-        StupidSpout sSpout = new StupidSpout(inputScheme, input_IP, Integer.parseInt(input_port));
+        FixedSocketSpout sSpout = new FixedSocketSpout(inputScheme, input_IP, Integer.parseInt(input_port));
 
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/results?authSource=admin";
@@ -49,7 +47,7 @@ public class AggregateSum {
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout)
             .window(SlidingWindows.of(Count.of(8), Count.of(4)))
-            .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new Values(x)))
+            .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             .aggregateByKey(new SumAggregator())
             .map(new ToOutputTuple(NTP_IP))
             .to(mongoBolt);

@@ -44,7 +44,8 @@ def deploy_generator(node, gen_rate, reservation_id):
 
 def deploy_mongo(node):
     print("Copying mongo files to node")
-    os.system("ssh " + node + " 'rsync -r --delete /var/scratch/ddps2016/mongo_data/ /local/ddps2016/mongo_data/'")
+    os.system("ssh " + node + " 'mkdir -p /local/ddps2016/mongo_data'")
+    os.system("ssh " + node + " 'rsync -r --delete /var/scratch/ddps2016/mongo_data/ /local/ddps2016/mongo_data'")
 
     mongo_start_command = \
 	" 'screen -d -m numactl --interleave=all" + \
