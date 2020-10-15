@@ -1,7 +1,7 @@
 package aggregation;
 import aggregation.ToOutputTuple;
 import aggregation.SumAggregator;
-import aggregation.TickAwareMongoBolt;
+import aggregation.MongoInsertBolt;
 import aggregation.StupidSpout;
 
 // STORM
@@ -17,7 +17,7 @@ import org.apache.storm.streams.Pair;
 import org.apache.storm.generated.*;
 import org.apache.storm.spout.Scheme; // REMOVE along WITH STUPIDSPOUT
 import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
-import org.apache.storm.mongodb.bolt.MongoInsertBolt;
+//import org.apache.storm.mongodb.bolt.MongoInsertBolt;
 
 // AUXILLIARY
 import java.util.Arrays;
@@ -43,7 +43,6 @@ public class AggregateSum {
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/results?authSource=admin";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency");
-        //TickAwareMongoBolt mongoBolt = new TickAwareMongoBolt(mongo_addr, "aggregation", mongoMapper);
 	MongoInsertBolt mongoBolt = new MongoInsertBolt(mongo_addr, "aggregation", mongoMapper);
 
         // Build a stream
