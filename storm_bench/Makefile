@@ -12,6 +12,7 @@ MONGO_ADRESS	= localhost
 NUM_WORKERS		= 1
 NIMBUS_ADDRESS	= localhost
 ZK_ADDRESS		= localhost
+WORKER_LIST     = []
 
 all: build
 
@@ -24,7 +25,8 @@ submit: build
 	storm jar \
 	-c storm.zookeeper.servers="[\"$(ZK_ADDRESS)\"]" \
 	-c nimbus.seeds="[\"$(NIMBUS_ADDRESS)\"]" \
-	--jars $(RUN_LIBS) $(JAR_NAME) aggregation.AggregateSum \
+        -c supervisor.supervisors=$(WORKER_LIST) \
+        --jars $(RUN_LIBS) $(JAR_NAME) aggregation.AggregateSum \
 	$(INPUT_ADRESS) $(INPUT_PORT) $(MONGO_ADRESS) $(NUM_WORKERS) $(NTP_ADDRESS) 
 
 kill:

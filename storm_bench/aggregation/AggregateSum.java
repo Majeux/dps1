@@ -14,9 +14,7 @@ import org.apache.storm.topology.base.BaseWindowedBolt.Count;
 import org.apache.storm.topology.base.BaseWindowedBolt.Duration;
 import org.apache.storm.streams.Pair;
 import org.apache.storm.generated.*;
-import org.apache.storm.spout.Scheme; // REMOVE along WITH STUPIDSPOUT
 import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
-//import org.apache.storm.mongodb.bolt.MongoInsertBolt;
 
 // AUXILLIARY
 import java.util.Arrays;
@@ -45,8 +43,8 @@ public class AggregateSum {
 
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
-        builder.newStream(sSpout)
-            .repartition(num_workers)
+        builder.newStream(sSpout, num_workers)
+            //.repartition(32)
             .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             .aggregateByKey(new SumAggregator())
