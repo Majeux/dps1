@@ -43,9 +43,9 @@ public class AggregateSum {
 
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
-        builder.newStream(sSpout, num_workers)
-            //.repartition(32)
+        builder.newStream(sSpout)
             .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
+            .repartition(32)
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             .aggregateByKey(new SumAggregator())
             .map(new ToOutputTuple())
@@ -54,6 +54,7 @@ public class AggregateSum {
         // Build config and submit
         Config config = new Config();
         config.setNumWorkers(num_workers);
+	config.setDebug(true);
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
         catch(AlreadyAliveException e) { System.out.println("Already alive"); }

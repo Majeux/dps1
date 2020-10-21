@@ -59,6 +59,7 @@ public class MongoInsertBolt extends AbstractMongoBolt {
 
         SimpleTuple outputTuple = new SimpleTuple(outputFields, outputValues);
         mongoClient.insert(Arrays.asList(mapper.toDocument(outputTuple)), ordered);
+        System.out.println("MONGOINSERT");
     }
  
 
