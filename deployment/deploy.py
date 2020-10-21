@@ -1,7 +1,7 @@
 import os
 import time
 
-BUDGET = 100000
+BUDGET = 1000000
 NUM_GENERATORS = 16
 
 def storm_cli_config(zk_nimbus_node, worker_nodes, local):
@@ -45,12 +45,12 @@ def deploy_zk_nimbus(node, worker_nodes):
     os.system("ssh " + node + nimbus_start_command)
 
 def deploy_workers(nodes, zk_nimbus_node):
+    time.sleep(3)
     for i in nodes:
         # Create local storage folder
         os.system("ssh " + i + " 'mkdir -p /local/ddps2016/storm-local'")
         os.system("ssh " + i + " 'mkdir -p /local/ddps2016/storm-logs'")
         
-        time.sleep(3)
         worker_start_command = \
             " 'screen -d -m storm supervisor" + \
             storm_cli_config(zk_nimbus_node, nodes, i) + "'"

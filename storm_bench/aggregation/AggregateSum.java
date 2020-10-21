@@ -45,16 +45,16 @@ public class AggregateSum {
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout)
             .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
-            .repartition(32)
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
+            .repartition(num_workers)
             .aggregateByKey(new SumAggregator())
             .map(new ToOutputTuple())
+            .repartition(1)
             .to(mongoBolt);
 
         // Build config and submit
         Config config = new Config();
         config.setNumWorkers(num_workers);
-	config.setDebug(true);
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
         catch(AlreadyAliveException e) { System.out.println("Already alive"); }

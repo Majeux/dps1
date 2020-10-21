@@ -22,6 +22,7 @@ public class ToOutputTuple implements Function<Pair<Integer,AggregationResult>, 
     public SimpleTuple apply(Pair<Integer, AggregationResult> input) {
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "max_event_time"));
 
+	System.out.println("outputtuple");
         int gemID = input.getFirst();
         String aggregate = Integer.toString(input.getSecond().price);
         Double highest_event_time = input.getSecond().event_time;
