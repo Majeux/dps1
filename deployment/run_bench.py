@@ -21,9 +21,8 @@ def get_reservation_info():
 def cancel_reservation(reservation_id):
     print("Cancelling reservation")
     os.system("preserve -c " + reservation_id)
+
 	
-
-
 if len(sys.argv) < 3:
     print("You must supply a number of worker nodes, and a data generation speed")
     exit()
@@ -39,19 +38,19 @@ print("Benchmarking generation rate ", gen_rate, " on ", num_workers, " workers"
 # Reserve the nodes
 os.system("preserve -# " + str(num_workers + 3) + " -t 00:15:00")
 time.sleep(1)
-try:
-    reservation = get_reservation_info()
-except Exception as e:
-    print(e)
-    exit()
 
+# Get reservation info
+reservation = get_reservation_info()
 reservation_id = reservation[ID_IDX]
+reservation_status = reservation[STATUS_IDX]
+reserved_nodes = reservation[NODES_IDX:]
 
 # Continuously check whether the nodes are available
-reservation_status=get_reservation_info()[STATUS_IDX]
 cur_waiting_time=0
-while reservation_status != "R":
-    reservation_status = get_reservation_info()[STATUS_IDX]
+while reservation_status != "R" and reserved_nodes is not []:
+    reservation = get_reservation_info()
+    reservation_status = reservation[STATUS_IDX]
+    reserved_nodes = reservation[NODES_IDX:]
 
     print("Reservation status: {}".format(reservation_status))
     time.sleep(POLLING_INTERVAL)
@@ -63,7 +62,6 @@ while reservation_status != "R":
         exit()
 
 # If we've gotten here, the reservation is ready
-reserved_nodes = reservation[NODES_IDX:]
 print("Got reservation on nodes: ", reserved_nodes)
 print("Deploying cluster.")
 

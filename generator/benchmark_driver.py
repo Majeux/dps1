@@ -16,18 +16,19 @@ STOP_TOKEN = "_STOP_"
 
 class BenchmarkDriver:
     # statics
-    TEST = False                 #generate data without TCP connection
+    TEST = False                #generate data without TCP connection
     PRINT_CONN_STATUS = True    #print messages regarding status of socket connection
-    PRINT_CONFIRM_TUPLE = True #print tuples when they are being send
+    PRINT_CONFIRM_TUPLE = False #print tuples when they are being send
+    PRINT_QUEUE_SIZES = True    #print the sizes of the queue during the run
 
     SOCKET_TIMEOUT = 6000
     HOST = "0.0.0.0"
     PORT = 5555
 
-    QUEUE_MAX = 2000000    # TODO configure
+    QUEUE_BUFFER_SECS = 2 # the maximum size of the queue expressed in seconds of generation
     GET_TIMEOUT = 10
 
-    QUEUE_LOG_INTERVAL = 10 # TODO configure
+    QUEUE_LOG_INTERVAL = 1000 # TODO configure
 
     # Object variables
     #   q: Queue        --
@@ -39,7 +40,7 @@ class BenchmarkDriver:
     #   q_size_log: [int]
 
     def __init__(self, budget, rate, n_generators, ntp_address):
-        self.q = Queue(self.QUEUE_MAX)
+        self.q = Queue(rate * self.QUEUE_BUFFER_SECS)
         self.error_q = Queue()
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
@@ -61,18 +62,22 @@ class BenchmarkDriver:
     # end -- def __init__
 
     def run(self):
-        if self.TEST:
-            self.stream_test()
-        else:
-            self.stream_from_queue()
+        try:
+            if self.TEST:
+                self.stream_test()
+            else:
+                self.stream_from_queue()
+        except:
+            raise
+        finally:
+            if self.PRINT_CONFIRM_TUPLE:
+                for i, r in enumerate(self.results):
+                    print(i, ": ", r)
 
-        if self.PRINT_CONFIRM_TUPLE:
-            for i, r in enumerate(self.results):
-                print(i, ": ", r)
-
-        if self.PRINT_CONFIRM_TUPLE:
-            for i, r in enumerate(self.q_size_log):
-                print(i*10, ": ", r)
+            
+            if self.PRINT_QUEUE_SIZES:
+                for i, r in enumerate(self.q_size_log):
+                    print(i*10, ": ", r)
     # end -- def run
 
     def consume_loop(self, consume_f, *args):
@@ -85,7 +90,7 @@ class BenchmarkDriver:
             if data == STOP_TOKEN:
                 raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
 
-            if i % self.QUEUE_LOG_INTERVAL == 0:
+            if self.PRINT_QUEUE_SIZES and i % self.QUEUE_LOG_INTERVAL == 0:
                 self.q_size_log.append(self.q.qsize())
 
             consume_f(data, i, *args)
@@ -124,6 +129,9 @@ class BenchmarkDriver:
                     print("Streamer connected by", addr)
 
                 self.consume_loop(send, conn)
+                print("prerec")
+                conn.recv(1)
+
     # end -- def stream_from_queue
 
     def get_purchase_data(self):

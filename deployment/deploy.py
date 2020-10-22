@@ -11,6 +11,7 @@ BUDGET = 1000000
 NUM_GENERATORS = 16
 IB_SUFFIX = ".ib.cluster"
 
+
 def storm_cli_config(zk_nimbus_node, worker_nodes, local):
     config = \
         " -c storm.zookeeper.servers=\"[\\\"" + zk_nimbus_node + IB_SUFFIX + "\\\"]\"" + \
@@ -18,6 +19,7 @@ def storm_cli_config(zk_nimbus_node, worker_nodes, local):
         " -c storm.local.hostname=" + local + IB_SUFFIX + \
         " -c supervisor.supervisors=" + cli_worker_list(worker_nodes)
     return config
+
 
 def cli_worker_list(worker_nodes):
     w_list = "\"[\\\""
@@ -51,6 +53,7 @@ def deploy_zk_nimbus(node, worker_nodes):
     print("Deploying nimbus on " + node)
     os.system("ssh " + node + nimbus_start_command)
 
+
 def deploy_workers(nodes, zk_nimbus_node):
     time.sleep(3)
     for i in nodes:
@@ -65,14 +68,16 @@ def deploy_workers(nodes, zk_nimbus_node):
         print("Deploying worker " + i)
         os.system("ssh " + i + worker_start_command)
 
+
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
+	" 'screen -L -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
     os.system("ssh " + node + generator_start_command)
+
 
 def deploy_mongo(node):
     print("Copying mongo files to node")
@@ -85,6 +90,7 @@ def deploy_mongo(node):
 
     print("Deploying mongo server on " + node)
     os.system("ssh " + node + mongo_start_command);
+
 
 def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker_nodes):
     print("Waiting for the storm cluster to initialize...")
@@ -102,6 +108,7 @@ def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker
 
     print("Submitting topology to the cluster")
     os.system(submit_command)
+
 
 def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     global dead
@@ -144,9 +151,10 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     if autokill:
         print("Automatic shutdown successful, press enter continue")
 
+
 def auto_shutdown(zk_nimbus_node, mongo_node, worker_nodes):
     s = sched.scheduler(time.time, time.sleep)
-    s.enter(1*60, 1, kill_cluster, argument=(zk_nimbus_node, mongo_node, worker_nodes, True,))
+    s.enter(14*60, 1, kill_cluster, argument=(zk_nimbus_node, mongo_node, worker_nodes, True,))
     s.run(True)    
 
 

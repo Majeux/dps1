@@ -15,7 +15,6 @@ public class AggregationResult implements Serializable {
 
     public AggregationResult(Tuple x) {
         this(x.getIntegerByField("price"), x.getDoubleByField("event_time"));
-	System.out.println("agresult");
     }
 
     public String print() {

@@ -12,7 +12,6 @@ public class SumAggregator implements CombinerAggregator<AggregationResult, Aggr
 
     @Override // Updates the sum by adding the value (this could be a partial sum)
     public AggregationResult apply(AggregationResult aggregate, AggregationResult value) {
-        System.out.println("AppLY");
         return new AggregationResult(
             aggregate.price + value.price,
             Math.max(aggregate.event_time, value.event_time)
@@ -28,5 +27,5 @@ public class SumAggregator implements CombinerAggregator<AggregationResult, Aggr
     }
 
     @Override // extract result from the accumulator
-    public AggregationResult result(AggregationResult accum) { return accum; }
+    public AggregationResult result(AggregationResult accum) { System.out.println("AGGresult"); return accum; }
 }
