@@ -1,14 +1,21 @@
 import os
 import time
+import sched
+import multiprocessing
+import ctypes
+
+dead = multiprocessing.Value(ctypes.c_bool, False)
+lock = multiprocessing.Lock()
 
 BUDGET = 1000000
 NUM_GENERATORS = 16
+IB_SUFFIX = ".ib.cluster"
 
 def storm_cli_config(zk_nimbus_node, worker_nodes, local):
     config = \
-        " -c storm.zookeeper.servers=\"[\\\"" + zk_nimbus_node + "\\\"]\"" + \
-        " -c nimbus.seeds=\"[\\\"" + zk_nimbus_node + "\\\"]\"" + \
-        " -c storm.local.hostname=" + local + \
+        " -c storm.zookeeper.servers=\"[\\\"" + zk_nimbus_node + IB_SUFFIX + "\\\"]\"" + \
+        " -c nimbus.seeds=\"[\\\"" + zk_nimbus_node + IB_SUFFIX + "\\\"]\"" + \
+        " -c storm.local.hostname=" + local + IB_SUFFIX + \
         " -c supervisor.supervisors=" + cli_worker_list(worker_nodes)
     return config
 
@@ -16,7 +23,7 @@ def cli_worker_list(worker_nodes):
     w_list = "\"[\\\""
     
     for i in worker_nodes:
-        w_list += i
+        w_list += i + IB_SUFFIX
         if i is not worker_nodes[-1]:
             w_list += "\",\""
     w_list += "\\\"]\""
@@ -85,23 +92,33 @@ def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker
     
     submit_command = \
         "cd /home/ddps2016/DPS1/storm_bench; make submit" + \
-        " ZK_ADDRESS=" + nimbus_node + \
-        " NIMBUS_ADDRESS=" + nimbus_node + \
-        " INPUT_ADRESS=" + generator_node + \
+        " ZK_ADDRESS=" + nimbus_node + IB_SUFFIX + \
+        " NIMBUS_ADDRESS=" + nimbus_node + IB_SUFFIX + \
+        " INPUT_ADRESS=" + generator_node + IB_SUFFIX + \
         " INPUT_PORT=5555" + \
-        " MONGO_ADRESS=" + mongo_node + \
+        " MONGO_ADRESS=" + mongo_node + IB_SUFFIX + \
         " NUM_WORKERS=" + str(num_workers) + \
         " WORKER_LIST=" + cli_worker_list(worker_nodes)
 
     print("Submitting topology to the cluster")
     os.system(submit_command)
 
-def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes):
+def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
+    global dead
+    global lock
+
+    lock.acquire()
+    if dead.value:
+        return
+    dead.value = True 
+    lock.release()   
+
+    print("Killing cluster{}.".format(" automatically" if autokill else ""))
+
     kill_command = \
     	"cd /home/ddps2016/DPS1/storm_bench; make kill" + \
-    	" ZK_ADDRESS=" + zk_nimbus_node + \
-    	" NIMBUS_ADDRESS=" + zk_nimbus_node
-    print("Killing topology")
+    	" ZK_ADDRESS=" + zk_nimbus_node + IB_SUFFIX +\
+    	" NIMBUS_ADDRESS=" + zk_nimbus_node + IB_SUFFIX
     os.system(kill_command)
     print("Spouts disabled. Waiting 30 seconds to process leftover tuples")
     time.sleep(35)
@@ -116,7 +133,7 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes):
     os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
     
     # Prompt to clean logs
-    if input("Clean logs?") == "y":
+    if autokill or input("Clean logs?") == "y":
         os.system("ssh " + zk_nimbus_node + " 'rm -r /local/ddps2016/storm-logs/*'")
         for i in worker_nodes:
             os.system("ssh " + i + " 'rm -r /local/ddps2016/storm-logs/*'")
@@ -124,9 +141,20 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes):
         os.system("rm /home/ddps2016/zookeeper/logs/*")
         os.system("rm /home/ddps2016/mongo/log/*")
 
+    if autokill:
+        print("Automatic shutdown successful, press enter continue")
+
+def auto_shutdown(zk_nimbus_node, mongo_node, worker_nodes):
+    s = sched.scheduler(time.time, time.sleep)
+    s.enter(1*60, 1, kill_cluster, argument=(zk_nimbus_node, mongo_node, worker_nodes, True,))
+    s.run(True)    
+
 
 def deploy_all(available_nodes, gen_rate, reservation_id):
+    global dead
+    global lock
     assert len(available_nodes) > 3
+    
     # Assign nodes
     zk_nimbus_node = available_nodes[0]
     generator_node = available_nodes[1]
@@ -134,6 +162,10 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
     worker_nodes = available_nodes[3:]
     num_workers = len(worker_nodes)
 
+    # Set up a timer to close everything neatly after 15 minutes
+    p = multiprocessing.Process(target=auto_shutdown, args=(zk_nimbus_node, mongo_node, worker_nodes,))
+    p.start()
+    
     # Deploy mongo server
     deploy_mongo(mongo_node)
 
@@ -148,7 +180,16 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
     submit_topology(zk_nimbus_node, generator_node, mongo_node, num_workers, worker_nodes)
 
     while True:
-        if input("Type \"k\" to kill the cluster\n") == "k":
-            kill_cluster(zk_nimbus_node, mongo_node, worker_nodes)
+        _in = input("Type \"k\" to kill the cluster\n")
+
+        lock.acquire()
+        if dead.value:
+            p.join()
+            lock.release()
             break
-		
+        elif _in == "k":
+            p.terminate()
+            lock.release()
+            kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, False)
+            break
+        
