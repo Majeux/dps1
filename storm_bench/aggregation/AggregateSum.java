@@ -43,13 +43,12 @@ public class AggregateSum {
 
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
-        builder.newStream(sSpout)
+        builder.newStream(sSpout, num_workers)
             .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
-            .repartition(num_workers)
+            //.repartition(num_workers)
             .aggregateByKey(new SumAggregator())
             .map(new ToOutputTuple())
-            .repartition(1)
             .to(mongoBolt);
 
         // Build config and submit
