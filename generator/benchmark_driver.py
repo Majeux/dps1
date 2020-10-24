@@ -1,6 +1,7 @@
 from multiprocessing import Process, Queue
 from queue import Empty as queueEmptyError
 from time import sleep
+from time import time
 from math import ceil
 from sys import argv
 import socket
@@ -41,6 +42,7 @@ class BenchmarkDriver:
 
     def __init__(self, budget, rate, n_generators, ntp_address):
         self.q = Queue(rate * self.QUEUE_BUFFER_SECS)
+        print("Queue maxsize: {}".format(self.q._maxsize))
         self.error_q = Queue()
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
@@ -127,9 +129,10 @@ class BenchmarkDriver:
             with conn:
                 if self.PRINT_CONN_STATUS:
                     print("Streamer connected by", addr)
-
+                start = time()
                 self.consume_loop(send, conn)
                 print("prerec")
+                print("Time taken: {}".format(time()-start))
                 conn.recv(1)
 
     # end -- def stream_from_queue

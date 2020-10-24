@@ -7,7 +7,7 @@ import ctypes
 dead = multiprocessing.Value(ctypes.c_bool, False)
 lock = multiprocessing.Lock()
 
-BUDGET = 1000000
+BUDGET = 4000000
 NUM_GENERATORS = 16
 IB_SUFFIX = ".ib.cluster"
 
@@ -37,9 +37,8 @@ def deploy_zk_nimbus(node, worker_nodes):
     # Start the zookeeper server
     zk_start_command = " 'zkServer.sh start'"
     os.system("ssh " + node + zk_start_command)
-    
-    print("Waiting for the zookeeper server to initialize...")
-    time.sleep(5)
+    time.sleep(2)    
+
 
     # Create local storage folder
     os.system("ssh " + node + " 'mkdir -p /local/ddps2016/storm-local'")
@@ -92,7 +91,7 @@ def deploy_mongo(node):
     os.system("ssh " + node + mongo_start_command);
 
 
-def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker_nodes):
+def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker_nodes, gen_rate):
     print("Waiting for the storm cluster to initialize...")
     time.sleep(15)
     
@@ -104,7 +103,8 @@ def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker
         " INPUT_PORT=5555" + \
         " MONGO_ADRESS=" + mongo_node + IB_SUFFIX + \
         " NUM_WORKERS=" + str(num_workers) + \
-        " WORKER_LIST=" + cli_worker_list(worker_nodes)
+        " WORKER_LIST=" + cli_worker_list(worker_nodes) + \
+        " GEN_RATE=" + str(gen_rate)
 
     print("Submitting topology to the cluster")
     os.system(submit_command)
@@ -116,6 +116,7 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
 
     lock.acquire()
     if dead.value:
+        lock.release()
         return
     dead.value = True 
     lock.release()   
@@ -185,7 +186,7 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
     deploy_generator(generator_node, gen_rate, reservation_id)
 
     # Submit topology to the cluster
-    submit_topology(zk_nimbus_node, generator_node, mongo_node, num_workers, worker_nodes)
+    submit_topology(zk_nimbus_node, generator_node, mongo_node, num_workers, worker_nodes, gen_rate)
 
     while True:
         _in = input("Type \"k\" to kill the cluster\n")

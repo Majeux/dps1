@@ -22,6 +22,10 @@ import java.util.Arrays;
 
 // Main class to submit to the storm cluser. Contains a stream API construction of a topology
 public class AggregateSum {
+    private static Integer windowSize = 8;
+    private static Integer windowSlide = 4;
+    private static Integer threadsPerMachine = 32;
+
     public static void main(String[] args) {
         // Get arguments
         if(args.length < 4) { System.out.println("Must supply input_ip, input_port, mongo_ip, and num_workers"); }
@@ -29,8 +33,9 @@ public class AggregateSum {
         String input_port = args[1];
         String mongo_IP = args[2];
         Integer num_workers = Integer.parseInt(args[3]);
+        Integer gen_rate = Integer.parseInt(args[4]);
         String NTP_IP = "";
-        if(args.length > 4) { NTP_IP = args[4]; }
+        if(args.length > 5) { NTP_IP = args[5]; }
 
         // Socket spout to get input tuples
         JsonScheme inputScheme = new JsonScheme(Arrays.asList("gem", "price", "event_time"));
@@ -43,17 +48,19 @@ public class AggregateSum {
 
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
-        builder.newStream(sSpout, num_workers*32)
-            .window(SlidingWindows.of(Duration.seconds(8), Duration.seconds(4)))
+        builder.newStream(sSpout, num_workers)
+            .window(SlidingWindows.of(Duration.seconds(windowSize), Duration.seconds(windowSlide)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
-            //.repartition(num_workers)
+            //.repartition(num_workers * threadsPerMachine)
             .aggregateByKey(new SumAggregator())
+            //.repartition(num_workers)
             .map(new ToOutputTuple())
             .to(mongoBolt);
 
         // Build config and submit
         Config config = new Config();
         config.setNumWorkers(num_workers);
+        //config.setMaxSpoutPending(2 * windowSize * gen_rate);
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
         catch(AlreadyAliveException e) { System.out.println("Already alive"); }

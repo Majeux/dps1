@@ -13,6 +13,7 @@ NUM_WORKERS		= 1
 NIMBUS_ADDRESS	= localhost
 ZK_ADDRESS		= localhost
 WORKER_LIST     = []
+GEN_RATE        = 1
 
 all: build
 
@@ -27,7 +28,11 @@ submit: build
 	-c nimbus.seeds="[\"$(NIMBUS_ADDRESS)\"]" \
         -c supervisor.supervisors=$(WORKER_LIST) \
         --jars $(RUN_LIBS) $(JAR_NAME) aggregation.AggregateSum \
-	$(INPUT_ADRESS) $(INPUT_PORT) $(MONGO_ADRESS) $(NUM_WORKERS) $(NTP_ADDRESS) 
+	$(INPUT_ADRESS) \
+	$(INPUT_PORT) \
+	$(MONGO_ADRESS) \
+	$(NUM_WORKERS) \
+	$(GEN_RATE)
 
 kill:
 	storm kill \
