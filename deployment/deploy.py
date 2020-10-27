@@ -9,7 +9,7 @@ lock = multiprocessing.Lock()
 
 BUDGET = 8000000
 NUM_GENERATORS = 16
-IB_SUFFIX = ".ib.cluster"
+IB_SUFFIX = ".cm.cluster"
 
 
 # Deploys the zookeeper server, and a storm nimbus on the same node
@@ -17,7 +17,7 @@ def deploy_zk_nimbus(node, worker_nodes):
     # Start the zookeeper server
     zk_start_command = " 'zkServer.sh start'"
     os.system("ssh " + node + zk_start_command)
-    time.sleep(5)    
+    time.sleep(2)    
 
     # Create local storage folder
     os.system("ssh " + node + " 'mkdir -p /local/ddps2016/storm-local'")
