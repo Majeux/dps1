@@ -10,9 +10,6 @@ INPUT_ADRESS	= localhost
 INPUT_PORT		= 5555
 MONGO_ADRESS	= localhost
 NUM_WORKERS		= 1
-NIMBUS_ADDRESS	= localhost
-ZK_ADDRESS		= localhost
-WORKER_LIST     = []
 GEN_RATE        = 1
 
 all: build
@@ -23,11 +20,7 @@ build: $(SRC_FILES)
 	jar cvf $(JAR_NAME) $(SRC_DIR)
 
 submit: build
-	storm jar \
-	-c storm.zookeeper.servers="[\"$(ZK_ADDRESS)\"]" \
-	-c nimbus.seeds="[\"$(NIMBUS_ADDRESS)\"]" \
-        -c supervisor.supervisors=$(WORKER_LIST) \
-        --jars $(RUN_LIBS) $(JAR_NAME) aggregation.AggregateSum \
+	storm jar --jars $(RUN_LIBS) $(JAR_NAME) aggregation.AggregateSum \
 	$(INPUT_ADRESS) \
 	$(INPUT_PORT) \
 	$(MONGO_ADRESS) \
@@ -35,10 +28,7 @@ submit: build
 	$(GEN_RATE)
 
 kill:
-	storm kill \
-	-c storm.zookeeper.servers="[\"$(ZK_ADDRESS)\"]" \
-        -c nimbus.seeds="[\"$(NIMBUS_ADDRESS)\"]" \
-	"agsum"
+	storm kill "agsum"
 
 clean:
 	rm -f $(JARNAME)

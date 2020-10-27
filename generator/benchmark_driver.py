@@ -26,7 +26,7 @@ class BenchmarkDriver:
     HOST = "0.0.0.0"
     PORT = 5555
 
-    QUEUE_BUFFER_SECS = 2 # the maximum size of the queue expressed in seconds of generation
+    QUEUE_BUFFER_SECS = 5 # the maximum size of the queue expressed in seconds of generation
     GET_TIMEOUT = 10
 
     QUEUE_LOG_INTERVAL = 1000 # TODO configure
@@ -79,7 +79,7 @@ class BenchmarkDriver:
             
             if self.PRINT_QUEUE_SIZES:
                 for i, r in enumerate(self.q_size_log):
-                    print(i*10, ": ", r)
+                    print(i*self.QUEUE_LOG_INTERVAL, ": ", r)
     # end -- def run
 
     def consume_loop(self, consume_f, *args):
@@ -90,6 +90,7 @@ class BenchmarkDriver:
             data = self.get_purchase_data()
 
             if data == STOP_TOKEN:
+                print("QSIZE: {}".format(self.q.qsize()))
                 raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
 
             if self.PRINT_QUEUE_SIZES and i % self.QUEUE_LOG_INTERVAL == 0:
