@@ -4,7 +4,7 @@ import subprocess
 import time
 from deploy import deploy_all
 
-MAX_WAIT_TIME = 100
+MAX_WAIT_TIME = 920
 POLLING_INTERVAL = 2
 
 # COLUMN INDEXES OF RESERVATION INFO

@@ -77,9 +77,9 @@ class BenchmarkDriver:
                     print(i, ": ", r)
 
             
-            if self.PRINT_QUEUE_SIZES:
-                for i, r in enumerate(self.q_size_log):
-                    print(i*self.QUEUE_LOG_INTERVAL, ": ", r)
+            #if self.PRINT_QUEUE_SIZES:
+            #    for i, r in enumerate(self.q_size_log):
+            #        print(i*self.QUEUE_LOG_INTERVAL, ": ", r)
     # end -- def run
 
     def consume_loop(self, consume_f, *args):
@@ -90,11 +90,12 @@ class BenchmarkDriver:
             data = self.get_purchase_data()
 
             if data == STOP_TOKEN:
-                print("QSIZE: {}".format(self.q.qsize()))
                 raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
 
             if self.PRINT_QUEUE_SIZES and i % self.QUEUE_LOG_INTERVAL == 0:
-                self.q_size_log.append(self.q.qsize())
+                #self.q_size_log.append(self.q.qsize())
+                print("|Q|@ ", i, ":", self.q.qsize())
+
 
             consume_f(data, i, *args)
     # end -- def consume_loop

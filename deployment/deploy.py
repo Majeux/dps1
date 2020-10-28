@@ -7,9 +7,9 @@ import ctypes
 dead = multiprocessing.Value(ctypes.c_bool, False)
 lock = multiprocessing.Lock()
 
-BUDGET = 8000000
+BUDGET = 4000000
 NUM_GENERATORS = 16
-IB_SUFFIX = ".cm.cluster"
+IB_SUFFIX = ".ib.cluster"
 
 
 # Deploys the zookeeper server, and a storm nimbus on the same node
@@ -125,6 +125,9 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     print("Spouts disabled. Waiting 15 seconds to process leftover tuples")
     time.sleep(17)
 
+    # Reset zookeeper storm files
+    os.system("zkCli.sh -server " + zk_nimbus_node + ":2186 deleteall /storm")
+
     # Export mongo data
     os.system(
         "mongoexport --host " + mongo_node + " -u storm -p test -d results -c aggregation " + \
@@ -136,8 +139,11 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     for i in worker_nodes:
         os.system("ssh " + i + " 'rm -rf /local/ddps2016/storm-local/*'")
 
+    # Clean mongo data
+    os.system("ssh " + mongo_node + " 'rm -rf /local/ddps2016/mongo_data/*'")
+
     # Prompt to clean logs
-    if autokill or input("Clean logs?") == "y":
+    if autokill or input("Clean logs?\n") == "y":
         os.system("ssh " + zk_nimbus_node + " 'rm -r /local/ddps2016/storm-logs/*'")
         for i in worker_nodes:
             os.system("ssh " + i + " 'rm -rf /local/ddps2016/storm-logs/*'")

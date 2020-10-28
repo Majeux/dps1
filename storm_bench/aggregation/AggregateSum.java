@@ -48,7 +48,7 @@ public class AggregateSum {
 
         // Build a stream
         StreamBuilder builder = new StreamBuilder();
-        builder.newStream(sSpout, num_workers)
+        builder.newStream(sSpout, num_workers*threadsPerMachine)
             .window(SlidingWindows.of(Duration.seconds(windowSize), Duration.seconds(windowSlide)))
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             //.repartition(num_workers * threadsPerMachine)

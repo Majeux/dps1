@@ -31,5 +31,5 @@ kill:
 	storm kill "agsum"
 
 clean:
-	rm -f $(JARNAME)
+	rm -f $(JAR_NAME)
 	rm -f $(SRC_DIR)/*.class
