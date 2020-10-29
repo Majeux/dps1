@@ -134,6 +134,9 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
         "-f \"GemID,latency,time\" --type=csv -o ~/result.csv"
     )
 
+    # Cancel reservation
+    os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
+    
     # Clean storm local storage
     os.system("ssh " + zk_nimbus_node + " 'rm -rf /local/ddps2016/storm-local/*'")
     for i in worker_nodes:
@@ -151,8 +154,6 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
         os.system("rm /home/ddps2016/zookeeper/logs/*")
         os.system("rm /home/ddps2016/mongo/log/*")
     
-    # Cancel reservation
-    os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
 
     if autokill:
         print("Automatic shutdown successful, press enter continue")
@@ -210,4 +211,6 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
             lock.release()
             kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, False)
             break
-        
+        else:
+            lock.release()
+            

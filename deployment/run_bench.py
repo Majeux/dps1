@@ -29,8 +29,6 @@ if len(sys.argv) < 3:
 
 # Read command line args
 num_workers = int(sys.argv[1])
-if num_workers < 4:
-    print("Too few nodes reserved")
 
 gen_rate = int(sys.argv[2])
 print("Benchmarking generation rate ", gen_rate, " on ", num_workers, " workers")
