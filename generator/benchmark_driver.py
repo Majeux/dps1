@@ -30,7 +30,7 @@ class BenchmarkDriver:
     QUEUE_BUFFER_SECS = 5 # the maximum size of the queue expressed in seconds of generation
     GET_TIMEOUT = 10
 
-    QUEUE_LOG_INTERVAL = 1000 # TODO configure
+    QUEUE_LOG_INTERVAL = 0.5 # time in seconds between queuesize logs
 
     # Object variables
     #   q: Queue        --
@@ -48,7 +48,7 @@ class BenchmarkDriver:
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
         self.q_size_log = []
-        self.done_sending = multiprocessing.Value(ctypes.c_bool, False, multiprocessing.Lock())
+        self.done_sending = Value(ctypes.c_bool, False)
 
         sub_rate = rate/n_generators
         sub_budget = ceil(budget/n_generators) # overestimate with at most n_generators
@@ -70,10 +70,13 @@ class BenchmarkDriver:
     # end -- def __init__
 
     def log_qsizes(self):
+        if not self.PRINT_QUEUE_SIZES:
+            return
+
         start = time()
         while not self.done_sending.value:
             print("|Q|@ ", time()-start, ":", self.q.qsize())
-            sleep(0.5)
+            sleep(self.QUEUE_LOG_INTERVAL)
         
         print("Time taken: {}".format(time()-start))
 
@@ -102,14 +105,11 @@ class BenchmarkDriver:
             data = self.get_purchase_data()
 
             if data == STOP_TOKEN:
+                self.done_sending.value = True
                 raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
 
-            if self.PRINT_QUEUE_SIZES and i % self.QUEUE_LOG_INTERVAL == 0:
-                #self.q_size_log.append(self.q.qsize())
-                print("|Q|@ ", i, ":", self.q.qsize())
-
-
             consume_f(data, i, *args)
+    
     # end -- def consume_loop
 
     def stream_test(self):

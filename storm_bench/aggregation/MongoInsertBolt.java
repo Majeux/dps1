@@ -1,4 +1,6 @@
 package aggregation;
+import aggregation.AggregationResult;
+
 
 import java.util.LinkedList;
 import java.util.List;
@@ -26,6 +28,7 @@ import org.bson.Document;
 import org.apache.storm.mongodb.bolt.AbstractMongoBolt;
 import org.apache.storm.cassandra.trident.state.SimpleTuple;
 import org.apache.storm.tuple.Fields;
+import org.apache.storm.streams.Pair;
 import org.apache.storm.utils.TupleUtils;
 
 public class MongoInsertBolt extends AbstractMongoBolt {
@@ -44,24 +47,29 @@ public class MongoInsertBolt extends AbstractMongoBolt {
     @Override
     public void execute(Tuple tuple) {
         if(TupleUtils.isTick(tuple)) { return; }
-        SimpleTuple tup = (SimpleTuple)tuple.getValue(0);
+
+        // GemID for this aggregation
+	String gemID = Integer.toString(tuple.getInteger(0));
+	
+        // The results of the aggregation
+        AggregationResult res = (AggregationResult) tuple.getValue(1);
 
         // Calculate latency at the moment before output
-        Double max_event_time = tup.getDoubleByField("max_event_time");
+        Double max_event_time = res.event_time;
         Double cur_time = timeGetter.get();
         Double latency = cur_time - max_event_time;
 
+        String aggregate = Integer.toString(res.price); 
+
         // Build up the final result tuple
         Fields outputFields = new Fields(Arrays.asList("GemID", "aggregate", "latency", "time"));
-        List<Object> outputValues = new ArrayList(tup.getValues());
-        outputValues.set(2, latency);
-        outputValues.add(cur_time);
+        List<Object> outputValues = Arrays.asList(gemID, aggregate, latency, cur_time);
 
         SimpleTuple outputTuple = new SimpleTuple(outputFields, outputValues);
         mongoClient.insert(Arrays.asList(mapper.toDocument(outputTuple)), ordered);
+        collector.ack(tuple);
         System.out.println("MONGOINSERT");
     }
- 
 
     public MongoInsertBolt withOrdered(boolean ordered) {
         this.ordered = ordered;

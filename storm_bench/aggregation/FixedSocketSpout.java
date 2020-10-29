@@ -76,7 +76,6 @@ public class FixedSocketSpout implements IRichSpout {
 
     @Override
     public void close() {
-        System.out.println("CLOSE");
         running = false;
         readerThread.interrupt();
         queue.clear();
@@ -87,15 +86,13 @@ public class FixedSocketSpout implements IRichSpout {
 
     @Override
     public void activate() {
-        System.out.println("ACTIVATE");
         running = true;
-	readerThread = new Thread(new SocketReaderRunnable()); //TODO: reuse thread
+	readerThread = new Thread(new SocketReaderRunnable());
         readerThread.start(); 
     }
 
     @Override
     public void deactivate() {
-        System.out.println("DEACTIVATE");
         running = false;
     }
 
@@ -143,7 +140,6 @@ public class FixedSocketSpout implements IRichSpout {
     private class SocketReaderRunnable implements Runnable {
         @Override
         public void run() {
-            System.out.println("START RUN");
             while (running) {
                 try {
                     String line = in.readLine();

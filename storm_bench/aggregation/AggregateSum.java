@@ -1,5 +1,4 @@
 package aggregation;
-import aggregation.ToOutputTuple;
 import aggregation.SumAggregator;
 import aggregation.MongoInsertBolt;
 import aggregation.FixedSocketSpout;
@@ -54,13 +53,12 @@ public class AggregateSum {
             //.repartition(num_workers * threadsPerMachine)
             .aggregateByKey(new SumAggregator())
             //.repartition(num_workers)
-            .map(new ToOutputTuple())
             .to(mongoBolt);
 
         // Build config and submit
         Config config = new Config();
         config.setNumWorkers(num_workers);
-        //config.setMaxSpoutPending(2 * windowSize * gen_rate);
+        config.setMaxSpoutPending(2 * windowSize * gen_rate);
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
         catch(AlreadyAliveException e) { System.out.println("Already alive"); }
