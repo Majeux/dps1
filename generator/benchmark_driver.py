@@ -1,4 +1,5 @@
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Lock, Value
+import ctypes
 from queue import Empty as queueEmptyError
 from time import sleep
 from time import time
@@ -47,6 +48,7 @@ class BenchmarkDriver:
         self.budget = budget
         self.results = [0]*generator.GEM_RANGE
         self.q_size_log = []
+        self.done_sending = multiprocessing.Value(ctypes.c_bool, False, multiprocessing.Lock())
 
         sub_rate = rate/n_generators
         sub_budget = ceil(budget/n_generators) # overestimate with at most n_generators
@@ -56,12 +58,26 @@ class BenchmarkDriver:
         else:
             ntp_clients = [ (ntplib.NTPClient(), ntp_address) ]  * n_generators
 
+        self.qsize_log_thread = Process(target=self.log_qsizes, args=())  
+
         self.generators = [
             Process(target=generator.purchase_generator,
             args=(self.q, self.error_q, (ntp_clients[i]), i, sub_rate, sub_budget,),
             daemon = True)
         for i in range(n_generators) ]
+
+        
     # end -- def __init__
+
+    def log_qsizes(self):
+        start = time()
+        while not self.done_sending.value:
+            print("|Q|@ ", time()-start, ":", self.q.qsize())
+            sleep(0.5)
+        
+        print("Time taken: {}".format(time()-start))
+
+    # end -- def log_qsizes
 
     def run(self):
         try:
@@ -76,10 +92,6 @@ class BenchmarkDriver:
                 for i, r in enumerate(self.results):
                     print(i, ": ", r)
 
-            
-            #if self.PRINT_QUEUE_SIZES:
-            #    for i, r in enumerate(self.q_size_log):
-            #        print(i*self.QUEUE_LOG_INTERVAL, ": ", r)
     # end -- def run
 
     def consume_loop(self, consume_f, *args):
@@ -131,10 +143,12 @@ class BenchmarkDriver:
             with conn:
                 if self.PRINT_CONN_STATUS:
                     print("Streamer connected by", addr)
-                start = time()
+                
+                self.qsize_log_thread.start()
                 self.consume_loop(send, conn)
-                print("prerec")
-                print("Time taken: {}".format(time()-start))
+                
+                print("All tuples sent, waiting for cluster in recv")
+                self.done_sending.value = True
                 conn.recv(1)
 
     # end -- def stream_from_queue
