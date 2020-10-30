@@ -4,18 +4,20 @@ import sched
 import multiprocessing
 import ctypes
 
+# Global lock to ensure shutdown is performed only once
 dead = multiprocessing.Value(ctypes.c_bool, False)
 lock = multiprocessing.Lock()
 
+# Parameters
 BUDGET = 4000000
 NUM_GENERATORS = 16
 IB_SUFFIX = ".ib.cluster"
 
 # Configs
-STORM_TEMPLATE = "/home/ddps2016/DPS1/configs/storm-template.yaml"
-STORM_CONFIG = "/home/ddps2016/DPS1/configs/storm.yaml"
-MONGO_CONFIG = "/home/ddps2016/DPS1/configs/mongodb.conf"
-ZOOKEEPER_CONFIG = "/home/ddps2016/DPS1/configs/zoo.cfg"
+STORM_TEMPLATE = "/home/ddps2016/DPS1/configs/storm/storm-template.yaml"
+STORM_CONFIG = "/home/ddps2016/DPS1/configs/storm/storm.yaml"
+MONGO_CONFIG = "/home/ddps2016/DPS1/configs/mongo/mongodb.conf"
+ZOOKEEPER_CONFIG_DIR = "/home/ddps2016/DPS1/configs/zookeeper"
 
 # Data locations
 EMPTY_MONGO = "/var/scratch/ddps2016/mongo_data/"
@@ -35,7 +37,7 @@ DATA_GENERATOR = "/home/ddps2016/DPS1/generator/benchmark_driver.py"
 # Deploys the zookeeper server, and a storm nimbus on the same node
 def deploy_zk_nimbus(node, worker_nodes):
     # Start the zookeeper server
-    zk_start_command = " 'zkServer.sh --config " + ZOOKEEPER_CONFIG + " start" + "'"
+    zk_start_command = " 'zkServer.sh --config " + ZOOKEEPER_CONFIG_DIR + " start" + "'"
     os.system("ssh " + node + zk_start_command)
     time.sleep(2)    
 
@@ -71,7 +73,7 @@ def deploy_workers(nodes, zk_nimbus_node):
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -L -d -m " + DATA_GENERATOR + " " + \
+	" 'screen -d -m " + DATA_GENERATOR + " " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
@@ -101,6 +103,7 @@ def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker
     
     submit_command = \
         "cd /home/ddps2016/DPS1/storm_bench; make submit" + \
+        " STORM_CONF=" + STORM_CONFIG + \
         " INPUT_ADRESS=" + generator_node + IB_SUFFIX + \
         " INPUT_PORT=5555" + \
         " MONGO_ADRESS=" + mongo_node + IB_SUFFIX + \
@@ -145,7 +148,7 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     print("Killing cluster{}.".format(" automatically" if autokill else ""))
 
     # Kill the topology
-    os.system("cd /home/ddps2016/DPS1/storm_bench; make kill")
+    os.system("storm kill --config " + STORM_CONFIG + " agsum")
     print("Spouts disabled. Waiting 15 seconds to process leftover tuples")
     time.sleep(15)
 
