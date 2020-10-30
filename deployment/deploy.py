@@ -11,6 +11,26 @@ BUDGET = 4000000
 NUM_GENERATORS = 16
 IB_SUFFIX = ".ib.cluster"
 
+# Configs
+STORM_TEMPLATE = "../configs/storm-template.yaml"
+STORM_CONFIG = "../configs/storm.yaml"
+MONGO_CONFIG = "../configs/mongodb.conf"
+ZOOKEEPER_CONFIG = "zoo.cfg"
+
+# Data locations
+EMPTY_MONGO = "/var/scratch/ddps2016/mongo_data/"
+MONGO_DATA = "/local/ddps2016/mongo_data"
+STORM_DATA = "/local/ddps2016/storm-local"
+RESULTS = "~/results.csv"
+
+# Log locations
+STORM_LOGS = "/local/ddps2016/storm-logs"
+ZOOKEEPER_LOGS = "/home/ddps2016/zookeeper/logs"
+MONGO_LOG = "/home/ddps2016/mongo/log"
+
+# Program locations
+DATA_GENERATOR = "/home/ddps2016/DPS1/generator/benchmark_driver.py"
+
 
 # Deploys the zookeeper server, and a storm nimbus on the same node
 def deploy_zk_nimbus(node, worker_nodes):
@@ -20,12 +40,13 @@ def deploy_zk_nimbus(node, worker_nodes):
     time.sleep(2)    
 
     # Create local storage folder
-    os.system("ssh " + node + " 'mkdir -p /local/ddps2016/storm-local'")
-    os.system("ssh " + node + " 'mkdir -p /local/ddps2016/storm-logs'")
+    os.system("ssh " + node + " 'mkdir -p " + STORM_DATA + "'")
+    os.system("ssh " + node + " 'mkdir -p " + STORM_LOGS + "'")
 
     #Start the nimbus
     nimbus_start_command = \
-        " 'screen -d -m storm nimbus -c storm.local.hostname=" + node + IB_SUFFIX + "'"
+        " 'screen -d -m storm nimbus --config " + STORM_CONFIG + \
+        " -c storm.local.hostname=" + node + IB_SUFFIX + "'"
 
     print("Deploying nimbus on " + node)
     os.system("ssh " + node + nimbus_start_command)
@@ -35,11 +56,12 @@ def deploy_zk_nimbus(node, worker_nodes):
 def deploy_workers(nodes, zk_nimbus_node):
     for i in nodes:
         # Create local storage folder
-        os.system("ssh " + i + " 'mkdir -p /local/ddps2016/storm-local'")
-        os.system("ssh " + i + " 'mkdir -p /local/ddps2016/storm-logs'")
+        os.system("ssh " + i + " 'mkdir -p " + STORM_DATA + "'")
+        os.system("ssh " + i + " 'mkdir -p " + STORM_LOGS + "'")
         
         worker_start_command = \
-            " 'screen -d -m storm supervisor -c storm.local.hostname=" + i + IB_SUFFIX + "'"
+            " 'screen -d -m storm supervisor --config " + STORM_CONFIG + \
+            " -c storm.local.hostname=" + i + IB_SUFFIX + "'"
  
         print("Deploying supervisor on node " + i)
         os.system("ssh " + i + worker_start_command)
@@ -49,7 +71,7 @@ def deploy_workers(nodes, zk_nimbus_node):
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -L -d -m python3 /home/ddps2016/DPS1/generator/benchmark_driver.py " + \
+	" 'screen -L -d -m " + DATA_GENERATOR + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
@@ -59,12 +81,14 @@ def deploy_generator(node, gen_rate, reservation_id):
 # Deploys the mongo database server
 def deploy_mongo(node):
     print("Copying mongo files to node")
-    os.system("ssh " + node + " 'mkdir -p /local/ddps2016/mongo_data'")
-    os.system("ssh " + node + " 'rsync -r --delete /var/scratch/ddps2016/mongo_data/ /local/ddps2016/mongo_data'")
+    os.system(
+        "ssh " + node + " 'mkdir -p " + MONGO_DATA + "; " + \
+        "rsync -r --delete " + EMPTY_MONGO + " " + MONGO_DATA + "'"
+    )
 
     mongo_start_command = \
 	" 'screen -d -m numactl --interleave=all" + \
-	" mongod --config /home/ddps2016/mongo/mongodb.conf &'"
+	" mongod --config " + MONGO_CONFIG + " &'"
 
     print("Deploying mongo server on " + node)
     os.system("ssh " + node + mongo_start_command);
@@ -97,13 +121,13 @@ def worker_list(worker_nodes):
     return w_list
 
 # Needs to all be set in config file, because the cli settings don't work well
-def gen_config_file(zk_nimbus_node, worker_nodes):
+def gen_storm_config_file(zk_nimbus_node, worker_nodes):
     os.system(
-        "cat ~/storm/conf/storm-defaults.yaml | sed \'"
+        "cat " + STORM_TEMPLATE + " | sed \'"
         "s/NIM_SEED/" + zk_nimbus_node + IB_SUFFIX + "/g; " + \
         "s/ZOO_SERVER/" + zk_nimbus_node + IB_SUFFIX + "/g; " + \
         "s/SUPERVISORS/" + worker_list(worker_nodes) + "/g" + \
-        "' > ~/storm/conf/storm.yaml")
+        "\' > " + STORM_CONFIG)
 
 
 # Kills the cluster in a contolled fashion
@@ -123,7 +147,7 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     # Kill the topology
     os.system("cd /home/ddps2016/DPS1/storm_bench; make kill")
     print("Spouts disabled. Waiting 15 seconds to process leftover tuples")
-    time.sleep(17)
+    time.sleep(15)
 
     # Reset zookeeper storm files
     os.system("zkCli.sh -server " + zk_nimbus_node + ":2186 deleteall /storm")
@@ -131,29 +155,28 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
     # Export mongo data
     os.system(
         "mongoexport --host " + mongo_node + " -u storm -p test -d results -c aggregation " + \
-        "-f \"GemID,latency,time\" --type=csv -o ~/result.csv"
+        "-f \"GemID,latency,time\" --type=csv -o " + RESULTS 
     )
 
     # Cancel reservation
     os.system("preserve -c $(preserve -llist | grep ddps2016 | cut -f 1)")
     
     # Clean storm local storage
-    os.system("ssh " + zk_nimbus_node + " 'rm -rf /local/ddps2016/storm-local/*'")
+    os.system("ssh " + zk_nimbus_node + " 'rm -rf " + STORM_DATA + "/*'")
     for i in worker_nodes:
-        os.system("ssh " + i + " 'rm -rf /local/ddps2016/storm-local/*'")
+        os.system("ssh " + i + " 'rm -rf " + STORM_DATA + "/*'")
 
     # Clean mongo data
-    os.system("ssh " + mongo_node + " 'rm -rf /local/ddps2016/mongo_data/*'")
+    os.system("ssh " + mongo_node + " 'rm -rf " + MONGO_DATA + "/*'")
 
     # Prompt to clean logs
     if autokill or input("Clean logs?\n") == "y":
-        os.system("ssh " + zk_nimbus_node + " 'rm -r /local/ddps2016/storm-logs/*'")
+        os.system("ssh " + zk_nimbus_node + " 'rm -rf " + STORM_LOGS + "/*'")
         for i in worker_nodes:
-            os.system("ssh " + i + " 'rm -rf /local/ddps2016/storm-logs/*'")
+            os.system("ssh " + i + " 'rm -rf " + STORM_LOGS + "/*'")
 
-        os.system("rm /home/ddps2016/zookeeper/logs/*")
-        os.system("rm /home/ddps2016/mongo/log/*")
-    
+        os.system("rm " + ZOOKEEPER_LOGS + "/*")
+        os.system("rm " + MONGO_LOGS + + "/*")
 
     if autokill:
         print("Automatic shutdown successful, press enter continue")
@@ -184,8 +207,8 @@ def deploy_all(available_nodes, gen_rate, reservation_id):
     # Deploy mongo server
     deploy_mongo(mongo_node)
 
-    # Set nimbus hosts in config file, because it doesnt work for some reason
-    gen_config_file(zk_nimbus_node, worker_nodes)
+    # Generate a config file, because cli options do not work for some reason
+    gen_storm_config_file(zk_nimbus_node, worker_nodes)
     
     # Deploy data input generator
     deploy_generator(generator_node, gen_rate, reservation_id)

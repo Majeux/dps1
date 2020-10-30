@@ -1,3 +1,4 @@
+#!/bin/python3
 from multiprocessing import Process, Queue, Lock, Value
 import ctypes
 from queue import Empty as queueEmptyError
