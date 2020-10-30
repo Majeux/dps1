@@ -1,7 +1,7 @@
 # DPS assignment 1
 
 This is a reproduction of some experiments in <https://arxiv.org/abs/1802.08496> on the das5 cluster.
-The project is subdivided into 3 components:
+The project is subdivided into 5 components:
 
 - **generator:** *A custom data generator which connects to the storm cluster with a TCP socket.* 
 - **storm\_bench:** *A custom topology that aggregates some field by key, similar to the workload from the paper.*
@@ -29,3 +29,9 @@ perform the following tasks:
 - A mongoDB server is initialized.
 - The data generator is initialized.
 - The aggregation topology is submitted to the storm cluster.
+
+## Configs
+Configuration files for the various software packages that were used in the cluster
+
+## Results
+The raw data, plots, etc. of the various benchmarks we performed. See the report for more info.
