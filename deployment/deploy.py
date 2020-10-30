@@ -12,10 +12,10 @@ NUM_GENERATORS = 16
 IB_SUFFIX = ".ib.cluster"
 
 # Configs
-STORM_TEMPLATE = "../configs/storm-template.yaml"
-STORM_CONFIG = "../configs/storm.yaml"
-MONGO_CONFIG = "../configs/mongodb.conf"
-ZOOKEEPER_CONFIG = "zoo.cfg"
+STORM_TEMPLATE = "/home/ddps2016/DPS1/configs/storm-template.yaml"
+STORM_CONFIG = "/home/ddps2016/DPS1/configs/storm.yaml"
+MONGO_CONFIG = "/home/ddps2016/DPS1/configs/mongodb.conf"
+ZOOKEEPER_CONFIG = "/home/ddps2016/DPS1/configs/zoo.cfg"
 
 # Data locations
 EMPTY_MONGO = "/var/scratch/ddps2016/mongo_data/"
@@ -26,7 +26,7 @@ RESULTS = "~/results.csv"
 # Log locations
 STORM_LOGS = "/local/ddps2016/storm-logs"
 ZOOKEEPER_LOGS = "/home/ddps2016/zookeeper/logs"
-MONGO_LOG = "/home/ddps2016/mongo/log"
+MONGO_LOGS = "/home/ddps2016/mongo/log"
 
 # Program locations
 DATA_GENERATOR = "/home/ddps2016/DPS1/generator/benchmark_driver.py"
@@ -35,7 +35,7 @@ DATA_GENERATOR = "/home/ddps2016/DPS1/generator/benchmark_driver.py"
 # Deploys the zookeeper server, and a storm nimbus on the same node
 def deploy_zk_nimbus(node, worker_nodes):
     # Start the zookeeper server
-    zk_start_command = " 'zkServer.sh start'"
+    zk_start_command = " 'zkServer.sh --config " + ZOOKEEPER_CONFIG + " start" + "'"
     os.system("ssh " + node + zk_start_command)
     time.sleep(2)    
 
@@ -71,7 +71,7 @@ def deploy_workers(nodes, zk_nimbus_node):
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -L -d -m " + DATA_GENERATOR + \
+	" 'screen -L -d -m " + DATA_GENERATOR + " " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
@@ -176,7 +176,7 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, autokill):
             os.system("ssh " + i + " 'rm -rf " + STORM_LOGS + "/*'")
 
         os.system("rm " + ZOOKEEPER_LOGS + "/*")
-        os.system("rm " + MONGO_LOGS + + "/*")
+        os.system("rm " + MONGO_LOGS + "/*")
 
     if autokill:
         print("Automatic shutdown successful, press enter continue")
