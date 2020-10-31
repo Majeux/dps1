@@ -8,20 +8,22 @@ import matplotlib.pyplot as plt
 
 # .py
 from our_ntp import getLocalTime
-from benchmark_driver import STOP_TOKEN
+# from benchmark_driver import STOP_TOKEN
 
 GEM_RANGE   = 8
 PRICE_RANGE = 5
 
 PUT_TIMEOUT = 0
 
-def rand_normal(mean, sd, low, mean):
+def rand_normal(mean, sd, min, max):
         return truncnorm(
-                    (low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
+                    (min - mean) / sd, (max - mean) / sd, loc=mean, scale=sd)
+
+gem_generator = rand_normal(GEM_RANGE/2, GEM_RANGE/4, 0, GEM_RANGE)
 
 def gen_purchase(time_client=None):
     purchase = (
-        rand_normal(GEM_RANGE/2, GEM_RANGE/4, 0, GEM_RANGE),
+        int(round(gem_generator.rvs())),
         randrange(PRICE_RANGE),
         getLocalTime(time_client)
     )
@@ -62,8 +64,9 @@ def purchase_generator(q, error, time_client, id, rate, budget):
 if __name__ == "__main__":
     print("__________________\nTest ad_generator")
 
-    for i in range(10):
-        print(gen_purchase())
+    # for i in range(10):
+    #     print(gen_purchase())
 
-    # fig, ax = plt.subplots(3, sharex=True)
-    # ax[0].hist(X1.rvs(10000), normed=True)
+    fig, ax = plt.subplots(3)
+    ax[0].hist(gem_generator.rvs(10000))
+    plt.show()
