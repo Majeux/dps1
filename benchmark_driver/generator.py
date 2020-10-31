@@ -2,12 +2,11 @@ from random import randrange
 from time import sleep
 from queue import Full as queueFullError
 import ntplib
-import matplotlib.pyplot as plt
 from numpy.random import normal
 
 # .py
 from our_ntp import getLocalTime
-# from streamer import STOP_TOKEN
+from streamer import STOP_TOKEN
 
 GEM_RANGE   = 8
 PRICE_RANGE = 5
@@ -66,7 +65,3 @@ if __name__ == "__main__":
     res = [rand_normal((GEM_RANGE-1)/2, GEM_RANGE/4, 0, GEM_RANGE) for i in range(10000)]
     dist = [res.count(i) for i in range(GEM_RANGE)]
     print(dist)
-
-    fig, ax = plt.subplots(3)
-    ax[0].hist(res)
-    plt.savefig("plot.png")

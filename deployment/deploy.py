@@ -33,6 +33,8 @@ MONGO_LOGS = "/home/ddps2016/mongo/log"
 # Program locations
 DATA_GENERATOR = "/home/ddps2016/DPS1/benchmark_driver/streamer.py"
 
+# Export libs to screen
+SCREEN_LIBS = "export LD_LIBRARY_PATH_SCREEN=$LD_LIBRARY_PATH;"
 
 # Deploys the zookeeper server, and a storm nimbus on the same node
 def deploy_zk_nimbus(node, worker_nodes):
@@ -46,8 +48,8 @@ def deploy_zk_nimbus(node, worker_nodes):
     os.system("ssh " + node + " 'mkdir -p " + STORM_LOGS + "'")
 
     #Start the nimbus
-    nimbus_start_command = \
-        " 'screen -d -m storm nimbus --config " + STORM_CONFIG + \
+    nimbus_start_command = " '" + SCREEN_LIBS + \
+        " screen -d -m storm nimbus --config " + STORM_CONFIG + \
         " -c storm.local.hostname=" + node + IB_SUFFIX + "'"
 
     print("Deploying nimbus on " + node)
@@ -61,8 +63,8 @@ def deploy_workers(nodes, zk_nimbus_node):
         os.system("ssh " + i + " 'mkdir -p " + STORM_DATA + "'")
         os.system("ssh " + i + " 'mkdir -p " + STORM_LOGS + "'")
         
-        worker_start_command = \
-            " 'screen -d -m storm supervisor --config " + STORM_CONFIG + \
+        worker_start_command = " '" + SCREEN_LIBS + \
+            " screen -d -m storm supervisor --config " + STORM_CONFIG + \
             " -c storm.local.hostname=" + i + IB_SUFFIX + "'"
  
         print("Deploying supervisor on node " + i)
@@ -72,8 +74,8 @@ def deploy_workers(nodes, zk_nimbus_node):
 # Deploys the custom data generator
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
-    generator_start_command = \
-	" 'screen -L -d -m " + DATA_GENERATOR + " " + \
+    generator_start_command = " '" + SCREEN_LIBS + \
+        " screen -d -m -L python3 " + DATA_GENERATOR + " " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)
