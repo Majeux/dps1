@@ -73,7 +73,7 @@ def deploy_workers(nodes, zk_nimbus_node):
 def deploy_generator(node, gen_rate, reservation_id):
     # Start in screen to check output (only program that does not log to file)
     generator_start_command = \
-	" 'screen -d -m " + DATA_GENERATOR + " " + \
+	" 'screen -L -d -m " + DATA_GENERATOR + " " + \
         str(BUDGET) + " " + str(gen_rate) + " " + str(NUM_GENERATORS) + "'"
 
     print("Deploying generator on " + node)

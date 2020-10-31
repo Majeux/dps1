@@ -1,29 +1,27 @@
-from scipy.stats import truncnorm
 from random import randrange
 from time import sleep
 from queue import Full as queueFullError
-from scipy.stats import truncnorm
 import ntplib
 import matplotlib.pyplot as plt
+from numpy.random import normal
 
 # .py
 from our_ntp import getLocalTime
-from streamer import STOP_TOKEN
+# from streamer import STOP_TOKEN
 
 GEM_RANGE   = 8
 PRICE_RANGE = 5
 
 PUT_TIMEOUT = 0
 
-def rand_normal(mean, sd, min, max):
-        return truncnorm(
-                    (min - mean) / sd, (max - mean) / sd, loc=mean, scale=sd)
+def rand_normal(mean, sd, lower_bound, upper_bound):
+    val = min( max( int( round( normal(mean, sd) ) ), 0), GEM_RANGE)
 
 gem_generator = rand_normal(GEM_RANGE/2, GEM_RANGE/4, 0, GEM_RANGE)
 
 def gen_purchase(time_client=None):
     purchase = (
-        int(round(gem_generator.rvs())),
+        rand_normal(GEM_RANGE/2, GEM_RANGE/4, 0, GEM_RANGE),
         randrange(PRICE_RANGE),
         getLocalTime(time_client)
     )
@@ -69,4 +67,4 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(3)
     ax[0].hist(gem_generator.rvs(10000))
-    plt.show()
+    plt.savefig("plot.png")
