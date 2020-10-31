@@ -15,13 +15,11 @@ PRICE_RANGE = 5
 PUT_TIMEOUT = 0
 
 def rand_normal(mean, sd, lower_bound, upper_bound):
-    val = min( max( int( round( normal(mean, sd) ) ), 0), GEM_RANGE)
-
-gem_generator = rand_normal(GEM_RANGE/2, GEM_RANGE/4, 0, GEM_RANGE)
+    return min( max( int( round( normal(mean, sd) ) ), 0), GEM_RANGE-1)
 
 def gen_purchase(time_client=None):
     purchase = (
-        rand_normal(GEM_RANGE/2, GEM_RANGE/4, 0, GEM_RANGE),
+        rand_normal((GEM_RANGE-1)/2, GEM_RANGE/4, 0, GEM_RANGE),
         randrange(PRICE_RANGE),
         getLocalTime(time_client)
     )
@@ -65,6 +63,10 @@ if __name__ == "__main__":
     # for i in range(10):
     #     print(gen_purchase())
 
+    res = [rand_normal((GEM_RANGE-1)/2, GEM_RANGE/4, 0, GEM_RANGE) for i in range(10000)]
+    dist = [res.count(i) for i in range(GEM_RANGE)]
+    print(dist)
+
     fig, ax = plt.subplots(3)
-    ax[0].hist(gem_generator.rvs(10000))
+    ax[0].hist(res)
     plt.savefig("plot.png")
