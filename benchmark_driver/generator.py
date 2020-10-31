@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # .py
 from our_ntp import getLocalTime
-# from benchmark_driver import STOP_TOKEN
+from streamer import STOP_TOKEN
 
 GEM_RANGE   = 8
 PRICE_RANGE = 5

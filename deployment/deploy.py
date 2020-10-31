@@ -31,7 +31,7 @@ ZOOKEEPER_LOGS = "/home/ddps2016/zookeeper/logs"
 MONGO_LOGS = "/home/ddps2016/mongo/log"
 
 # Program locations
-DATA_GENERATOR = "/home/ddps2016/DPS1/generator/benchmark_driver.py"
+DATA_GENERATOR = "/home/ddps2016/DPS1/benchmark_driver/streamer.py"
 
 
 # Deploys the zookeeper server, and a storm nimbus on the same node

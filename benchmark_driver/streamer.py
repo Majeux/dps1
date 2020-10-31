@@ -17,7 +17,7 @@ import generator
 
 STOP_TOKEN = "_STOP_"
 
-class BenchmarkDriver:
+class Streamer:
     # statics
     TEST = False                #generate data without TCP connection
     PRINT_CONN_STATUS = True    #print messages regarding status of socket connection
@@ -35,7 +35,7 @@ class BenchmarkDriver:
 
     # Object variables
     #   q: Queue        --
-    #   error_q: Queue  -- Communicates error from child to BenchmarkDriver
+    #   error_q: Queue  -- Communicates error from child to Streamer
     #   generators: Process(generator.purchase_generator)
     #   budget: int
     #   generation_rate: int
@@ -107,7 +107,7 @@ class BenchmarkDriver:
 
             if data == STOP_TOKEN:
                 self.done_sending.value = True
-                raise RuntimeError("Aborting BenchmarkDriver, exception raised by generator")
+                raise RuntimeError("Aborting Streamer, exception raised by generator")
 
             consume_f(data, i, *args)
     
@@ -191,5 +191,5 @@ if __name__ == "__main__":
     n_generators = arg_to_int(argv[3], "n_generators")
     ntp_address  = argv[4] if len(argv) > 4 else None
 
-    driver = BenchmarkDriver(budget, rate, n_generators, ntp_address)
+    driver = Streamer(budget, rate, n_generators, ntp_address)
     driver.run()
