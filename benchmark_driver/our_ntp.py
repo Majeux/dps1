@@ -1,3 +1,4 @@
+# Quick wrapper to query can NTP client if it is available, else use time.time()
 from time import time
 import ntplib
 
