@@ -1,6 +1,25 @@
+// Max Blankestijn & Rintse van de Vlasakker
+// A fixed version of the SocketSpout provided with storm.
+
+// Corrects a race condition between the contructor and the activate() function.
+
+// The most notable alterations are in the constructor and activate() function:
+// Moved the creation and start of the reader thread to activate()
+
+// Original SocketSpout:
+// https://github.com/apache/storm/blob/master/sql/storm-sql-runtime/src/jvm/org/apache/storm/sql/runtime/datasource/socket/spout/SocketSpout.java
+
 package aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.storm.Config;
+import org.apache.storm.spout.Scheme;
+import org.apache.storm.spout.SpoutOutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.IRichSpout;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.Thread;
 import java.io.BufferedReader;
@@ -16,19 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
-import org.apache.storm.Config;
-import org.apache.storm.spout.Scheme;
-import org.apache.storm.spout.SpoutOutputCollector;
-import org.apache.storm.task.TopologyContext;
-import org.apache.storm.topology.IRichSpout;
-import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-/**
- * Spout for Socket data. Only available for Storm SQL.
- * The class doesn't handle reconnection, so you may not want to use this for production.
- */
 public class FixedSocketSpout implements IRichSpout {
     private static final Logger LOG = LoggerFactory.getLogger(FixedSocketSpout.class);
 
@@ -47,12 +54,6 @@ public class FixedSocketSpout implements IRichSpout {
     private SpoutOutputCollector collector;
     private Map<String, List<Object>> emitted;
 
-    /**
-     * SocketSpout Constructor.
-     * @param scheme Scheme
-     * @param host socket host
-     * @param port socket port
-     */
     public FixedSocketSpout(Scheme scheme, String host, int port) {
         this.scheme = scheme;
         this.host = host;
@@ -79,7 +80,6 @@ public class FixedSocketSpout implements IRichSpout {
         running = false;
         readerThread.interrupt();
         queue.clear();
-
         closeQuietly(in);
         closeQuietly(socket);
     }
@@ -87,8 +87,10 @@ public class FixedSocketSpout implements IRichSpout {
     @Override
     public void activate() {
         running = true;
-	readerThread = new Thread(new SocketReaderRunnable());
-        readerThread.start(); 
+        readerThread = new Thread(new SocketReaderRunnable());
+        // Only start the readerthread when activated, so that running is true
+        // when SocketReaderRunnable.run() is called
+        readerThread.start();
     }
 
     @Override
@@ -104,8 +106,8 @@ public class FixedSocketSpout implements IRichSpout {
                 String id = UUID.randomUUID().toString();
                 emitted.put(id, values);
                 collector.emit(values, id);
-            } 
-        } 
+            }
+        }
     }
 
     private List<Object> convertLineToTuple(String line) {
@@ -144,13 +146,12 @@ public class FixedSocketSpout implements IRichSpout {
                 try {
                     String line = in.readLine();
                     if (line == null) {
-                        throw new RuntimeException("EOF reached from the socket. We can't read the data any more.");
+                        throw new RuntimeException("EOF reached from the socket.");
                     }
 
                     List<Object> values = convertLineToTuple(line.trim());
                     queue.push(values);
                 } catch (Throwable t) {
-                    // This spout is added to test purpose, so just failing fast doesn't hurt much
                     die(t);
                 }
             }
@@ -158,19 +159,12 @@ public class FixedSocketSpout implements IRichSpout {
     }
 
     private void die(Throwable t) {
-        LOG.error("Halting process: TridentSocketSpout died.", t);
-        if (running || (t instanceof Error)) { //don't exit if not running, unless it is an Error
-            System.exit(11);
-        }
+        LOG.error("Halting process: FixedSocketSpout died.", t);
+        if (running || (t instanceof Error)) { System.exit(11); }
     }
 
     private void closeQuietly(final Closeable closeable) {
-        try {
-            if (closeable != null) {
-                closeable.close();
-            }
-        } catch (final IOException ioe) {
-            // ignore
-        }
+        try { if (closeable != null) { closeable.close(); } }
+        catch (final IOException ioe) { /* ignore */ }
     }
 }

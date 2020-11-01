@@ -1,12 +1,14 @@
+// Max Blankestijn & Rintse van de Vlasakker
+// Functor that defines how aggregation should be performed
+
 package aggregation;
 import aggregation.AggregationResult;
 
-// Storm
 import org.apache.storm.streams.operations.CombinerAggregator;
 
 // Aggregates sum, while finding the minimum event time.
 public class SumAggregator implements CombinerAggregator<AggregationResult, AggregationResult, AggregationResult> {
-    
+
     @Override // The initial value of the sum
     public AggregationResult init() { return new AggregationResult(0, Double.NEGATIVE_INFINITY); }
 

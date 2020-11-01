@@ -1,9 +1,11 @@
+// Max Blankestijn & Rintse van de Vlasakker
+// Storm topology for windowed aggregations
+
 package aggregation;
 import aggregation.SumAggregator;
 import aggregation.MongoInsertBolt;
 import aggregation.FixedSocketSpout;
 
-// STORM
 import org.apache.storm.streams.StreamBuilder;
 import org.apache.storm.sql.runtime.serde.json.JsonScheme;
 import org.apache.storm.Config;
@@ -15,18 +17,16 @@ import org.apache.storm.streams.Pair;
 import org.apache.storm.generated.*;
 import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
 
-// AUXILLIARY
 import java.util.Arrays;
 
 
-// Main class to submit to the storm cluser. Contains a stream API construction of a topology
 public class AggregateSum {
     private static Integer windowSize = 8;
     private static Integer windowSlide = 4;
     private static Integer threadsPerMachine = 32;
 
     public static void main(String[] args) {
-        // Get arguments
+        // Parse arguments
         if(args.length < 4) { System.out.println("Must supply input_ip, input_port, mongo_ip, and num_workers"); }
         String input_IP = args[0];
         String input_port = args[1];
@@ -43,20 +43,23 @@ public class AggregateSum {
         // Mongo bolt to store the results
         String mongo_addr = "mongodb://storm:test@" + mongo_IP + ":27017/results?authSource=admin";
         SimpleMongoMapper mongoMapper = new SimpleMongoMapper().withFields("GemID", "aggregate", "latency", "time");
-	MongoInsertBolt mongoBolt = new MongoInsertBolt(mongo_addr, "aggregation", mongoMapper);
+        MongoInsertBolt mongoBolt = new MongoInsertBolt(mongo_addr, "aggregation", mongoMapper);
 
-        // Build a stream
+        // Build the topology (stream api)
         StreamBuilder builder = new StreamBuilder();
-        builder.newStream(sSpout, num_workers * threadsPerMachine)
+        builder.newStream(sSpout, num_workers * threadsPerMachine) // Get tuples from TCP socket
+            // Window the input into (8s, 4s) windows
             .window(SlidingWindows.of(Duration.seconds(windowSize), Duration.seconds(windowSlide)))
+            // Map to key-value pair with the GemID as key, and an AggregationResult as value
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
+            // Aggregate the window by key
             .aggregateByKey(new SumAggregator())
+            // Insert the results into the mongo database
             .to(mongoBolt);
 
-        // Build config and submit
         Config config = new Config();
-        config.setNumWorkers(num_workers);
-        config.setMaxSpoutPending(4 * windowSize * gen_rate);
+        config.setNumWorkers(num_workers); // Number of supervisors to work on topology
+        config.setMaxSpoutPending(4 * windowSize * gen_rate); // Maximum number of unacked tuples
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
         catch(AlreadyAliveException e) { System.out.println("Already alive"); }
