@@ -21,10 +21,10 @@ import java.util.Arrays;
 
 
 public class AggregateSum {
+    private static Integer threadsPerMachine = 32;
     private static Integer windowSize = 8;
     private static Integer windowSlide = 4;
-    private static Integer threadsPerMachine = 32;
-
+    
     public static void main(String[] args) {
         // Parse arguments
         if(args.length < 4) { System.out.println("Must supply input_ip, input_port, mongo_ip, and num_workers"); }
@@ -35,7 +35,7 @@ public class AggregateSum {
         Integer gen_rate = Integer.parseInt(args[4]);
         String NTP_IP = "";
         if(args.length > 5) { NTP_IP = args[5]; }
-
+        
         // Socket spout to get input tuples
         JsonScheme inputScheme = new JsonScheme(Arrays.asList("gem", "price", "event_time"));
         FixedSocketSpout sSpout = new FixedSocketSpout(inputScheme, input_IP, Integer.parseInt(input_port));
@@ -49,7 +49,10 @@ public class AggregateSum {
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout, num_workers * threadsPerMachine) // Get tuples from TCP socket
             // Window the input into (8s, 4s) windows
-            .window(SlidingWindows.of(Duration.seconds(windowSize), Duration.seconds(windowSlide)))
+            .window(SlidingWindows.of(
+                Duration.seconds(windowSize / num_workers), 
+                Duration.seconds(windowSlide / num_workers)
+            ))
             // Map to key-value pair with the GemID as key, and an AggregationResult as value
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
             // Aggregate the window by key
