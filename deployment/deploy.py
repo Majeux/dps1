@@ -102,7 +102,7 @@ def deploy_mongo(node):
 # Submits topology to the cluster
 def submit_topology(nimbus_node, generator_node, mongo_node, num_workers, worker_nodes, gen_rate):
     print("Waiting for the storm cluster to initialize...")
-    time.sleep(5)
+    time.sleep(10)
     
     submit_command = \
         "cd /home/ddps2016/DPS1/storm_bench; make submit" + \
@@ -156,8 +156,8 @@ def kill_cluster(zk_nimbus_node, mongo_node, worker_nodes, gen_rate, autokill):
 
     # Kill the topology
     os.system("storm kill --config " + STORM_CONFIG + " agsum")
-    print("Spouts disabled. Waiting 15 seconds to process leftover tuples")
-    time.sleep(15)
+    print("Spouts disabled. Waiting 5 seconds to process leftover tuples")
+    time.sleep(5)
 
     # Reset zookeeper storm files
     os.system("zkCli.sh -server " + zk_nimbus_node + ":2186 deleteall /storm")

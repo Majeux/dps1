@@ -19,11 +19,10 @@ import org.apache.storm.mongodb.common.mapper.SimpleMongoMapper;
 
 import java.util.Arrays;
 
-
 public class AggregateSum {
-    private static Integer threadsPerMachine = 32;
-    private static Integer windowSize = 8;
-    private static Integer windowSlide = 4;
+    private static int threadsPerMachine = 32;
+    private static float windowSize = 8.0f;
+    private static float windowSlide = 4.0f;
     
     public static void main(String[] args) {
         // Parse arguments
@@ -49,9 +48,9 @@ public class AggregateSum {
         StreamBuilder builder = new StreamBuilder();
         builder.newStream(sSpout, num_workers * threadsPerMachine) // Get tuples from TCP socket
             // Window the input into (8s, 4s) windows
-            .window(SlidingWindows.of(
-                Duration.seconds(windowSize / num_workers), 
-                Duration.seconds(windowSlide / num_workers)
+            .window(SlidingWindows.of( // Window times in millis
+                Duration.of(Math.round(1000 * windowSize / num_workers)), 
+                Duration.of(Math.round(1000 * windowSlide / num_workers))
             ))
             // Map to key-value pair with the GemID as key, and an AggregationResult as value
             .mapToPair(x -> Pair.of(x.getIntegerByField("gem"), new AggregationResult(x)))
@@ -62,7 +61,7 @@ public class AggregateSum {
 
         Config config = new Config();
         config.setNumWorkers(num_workers); // Number of supervisors to work on topology
-        config.setMaxSpoutPending(4 * windowSize * gen_rate); // Maximum number of unacked tuples
+        config.setMaxSpoutPending(Math.round(4 * windowSize * gen_rate)); // Maximum # unacked tuples
 
         try { StormSubmitter.submitTopologyWithProgressBar("agsum", config, builder.build()); }
         catch(AlreadyAliveException e) { System.out.println("Already alive"); }
