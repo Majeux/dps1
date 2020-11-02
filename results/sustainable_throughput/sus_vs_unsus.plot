@@ -1,7 +1,8 @@
-set title "Sustainable vs. unsustainable throughput for 2 worker nodes"
-set xrange [0:500]
+set title "Sustainable vs. unsustainable throughput for 4 worker nodes"
+set xrange [0:400]
 set xlabel "Time (s)"
 set ylabel "Latency"
 set output 'sus_vs_unsus.png'
 set terminal png size 1024,768
-plot '2nodes_13000ipm.res' title "Sustainable (13K/s)" with lines lw 3, '2nodes_14000ipm.res' title "Unsustainable (14K/s)" with lines lw 3
+set key left top
+plot '4nodes_16000' title "16K/s (unsustainable)" with lines lw 3, '4nodes_15000' title "15K/s (sustainable)" with lines lw 3
