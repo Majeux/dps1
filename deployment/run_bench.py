@@ -39,6 +39,7 @@ print("Benchmarking generation rate ", gen_rate, " on ", num_workers, " workers"
 
 # Reserve the nodes
 os.system("preserve -# " + str(num_workers + BASE_NODES) + " -t 00:15:00")
+print("Waiting for reservation")
 
 # Get reservation info
 reservation = get_reservation_info()
@@ -54,7 +55,6 @@ while reservation_status != "R" and reserved_nodes is not []:
     reservation_status = reservation[STATUS_IDX]
     reserved_nodes = reservation[NODES_IDX:]
 
-    print("Reservation status: {}".format(reservation_status))
     time.sleep(POLLING_INTERVAL)
     cur_waiting_time += POLLING_INTERVAL
 
