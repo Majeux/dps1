@@ -7,8 +7,8 @@ The project is subdivided into 5 components:
 - **storm\_bench:** *A custom topology that aggregates some field by key, similar to the workload from the paper.*
 - **deployment:** *Scripts to deploy the above tools onto the das5 cluster.*
 
-## Data generator
-Python script that generates tuples in JSON format. The data generated are simplified purchases.
+## Benchmark driver
+Python program that generates tuples in JSON format. The data generated are simplified purchases.
 Tuples have the fields "GemID", "price" and "event_time", representing a Gem pack, 
 the price of that gem pack, and the time of purchase respectively. The JSONs are serialized,
 and sent over a TCP socket, to be recieved by a SocketSpout within a storm topology. The data 
