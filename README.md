@@ -6,6 +6,8 @@ The project is subdivided into 5 components:
 - **generator:** *A custom data generator which connects to the storm cluster with a TCP socket.* 
 - **storm\_bench:** *A custom topology that aggregates some field by key, similar to the workload from the paper.*
 - **deployment:** *Scripts to deploy the above tools onto the das5 cluster.*
+- **configs:** *Configuration files for the vairous softwares used.*
+- **results:** *Results of our benchmarking.*
 
 ## Benchmark driver
 Python program that generates tuples in JSON format. The data generated are simplified purchases.
